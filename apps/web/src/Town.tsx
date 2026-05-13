@@ -28,11 +28,21 @@ export function Town({ observation }: { observation: ObservationView }) {
     const host = hostRef.current;
     if (!host) return;
     let cancelled = false;
+    let initialized = false;
     const app = new Application();
     app
       .init({ background: 0x14141a, resizeTo: host, antialias: true })
       .then(() => {
-        if (cancelled) return;
+        initialized = true;
+        if (cancelled) {
+          // Cleanup ran before init resolved — destroy now that it's safe.
+          try {
+            app.destroy(true, { children: true });
+          } catch {
+            // pixi may already be partially torn down
+          }
+          return;
+        }
         host.appendChild(app.canvas);
         const root = new Container();
         root.position.set(host.clientWidth / 2, 60);
@@ -40,10 +50,19 @@ export function Town({ observation }: { observation: ObservationView }) {
         layerRef.current = root;
         appRef.current = app;
         drawConsumers(root, observation);
+      })
+      .catch(() => {
+        // swallow init errors during StrictMode double-mount churn
       });
     return () => {
       cancelled = true;
-      app.destroy(true, { children: true });
+      if (initialized) {
+        try {
+          app.destroy(true, { children: true });
+        } catch {
+          // ignore
+        }
+      }
       appRef.current = null;
       layerRef.current = null;
     };
