@@ -223,7 +223,7 @@ function fillEmptySeatsWithBots(match: ServerMatch): void {
       playerId: uuid(),
       token: uuid(),
       name: botName,
-      role: "ai",
+      role: "bot",
       companyId: seat,
       ready: true,
       connected: true,
@@ -319,11 +319,11 @@ export function observationFor(
   return buildObservation(match.game, player.companyId);
 }
 
-export function awaitingPlayers(match: ServerMatch): PlayerId[] {
+export function awaitingCompanyIds(match: ServerMatch): CompanyId[] {
   if (!match.game) return [];
   return match.players
     .filter((p) => !p.isBot && match.game!.pendingDecisions[p.companyId] == null)
-    .map((p) => p.playerId);
+    .map((p) => p.companyId);
 }
 
 export function classroomToPublic(c: Classroom): PublicClassroom {

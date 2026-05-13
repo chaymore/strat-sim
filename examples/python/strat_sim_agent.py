@@ -103,9 +103,10 @@ def main() -> None:
             # Server is resolving or in lobby — wait briefly and try again.
             time.sleep(1.0)
             continue
-        you_id = observation["you"]["id"]
-        if you_id not in result["awaitingPlayers"]:
-            # Already submitted this turn, just wait.
+        my_company = observation["you"]["id"]
+        awaiting = result.get("awaitingCompanyIds", [])
+        if my_company not in awaiting:
+            # Already submitted this turn, just wait for resolution.
             time.sleep(0.5)
             continue
         decision = choose_decision(observation)

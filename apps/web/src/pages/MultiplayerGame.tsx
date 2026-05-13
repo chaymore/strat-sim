@@ -13,7 +13,7 @@ export function MultiplayerGame({ matchId }: { matchId: string }) {
   const session = useSession((s) => s.match);
   const setMatch = useSession((s) => s.setMatchSession);
   const token = session?.playerToken ?? null;
-  const { socket, observation, awaitingPlayers } = useMatchSocket(matchId, token);
+  const { socket, observation, awaitingCompanyIds } = useMatchSocket(matchId, token);
   const [selected, setSelected] = useState<SelectedConsumer | null>(null);
 
   const companyNames = useMemo(() => {
@@ -45,7 +45,7 @@ export function MultiplayerGame({ matchId }: { matchId: string }) {
 
   const submit = (d: TurnDecision) => socket?.send({ type: "submit-decision", decision: d });
   const ended = observation.phase === "ended";
-  const youSubmitted = !awaitingPlayers.includes(session.playerId);
+  const youSubmitted = !awaitingCompanyIds.includes(session.companyId);
 
   return (
     <div style={{ display: "flex", height: "100%" }}>
@@ -69,8 +69,8 @@ export function MultiplayerGame({ matchId }: { matchId: string }) {
             companyNames={companyNames}
           />
         )}
-        {!ended && awaitingPlayers.length > 0 && (
-          <WaitingOverlay youSubmitted={youSubmitted} waiting={awaitingPlayers.length} />
+        {!ended && awaitingCompanyIds.length > 0 && (
+          <WaitingOverlay youSubmitted={youSubmitted} waiting={awaitingCompanyIds.length} />
         )}
         {ended && (
           <EndScreen

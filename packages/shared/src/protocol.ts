@@ -10,7 +10,7 @@ export type ClassCode = string;
 export type MatchCode = string;
 export type PlayerToken = string;
 export type PlayerId = string;
-export type Role = "instructor" | "student" | "ai";
+export type Role = "instructor" | "student" | "ai" | "bot";
 
 export interface PublicClassroom {
   code: ClassCode;
@@ -61,7 +61,7 @@ export type ClientMessage =
 
 export type ServerMessage =
   | { type: "lobby"; lobby: LobbyState }
-  | { type: "observation"; observation: ObservationView; awaitingPlayers: PlayerId[] }
+  | { type: "observation"; observation: ObservationView; awaitingCompanyIds: CompanyId[] }
   | { type: "turn-resolved"; turn: number; observation: ObservationView }
   | { type: "match-ended"; observation: ObservationView; winnerName: string | null }
   | { type: "error"; message: string };

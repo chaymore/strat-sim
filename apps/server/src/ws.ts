@@ -6,7 +6,7 @@ import type {
   ServerMessage,
 } from "@strat-sim/shared";
 import {
-  awaitingPlayers,
+  awaitingCompanyIds,
   findPlayerByToken,
   getMatch,
   observationFor,
@@ -104,7 +104,7 @@ function handleClientMessage(
         sendMessage(socket, {
           type: "observation",
           observation: observationFor(match, player),
-          awaitingPlayers: awaitingPlayers(match),
+          awaitingCompanyIds: awaitingCompanyIds(match),
         });
       }
       return;
@@ -168,14 +168,14 @@ function broadcastObservations(matchId: string) {
   if (!match?.game) return;
   const pool = connections.get(matchId);
   if (!pool) return;
-  const awaiting = awaitingPlayers(match);
+  const awaiting = awaitingCompanyIds(match);
   for (const c of pool) {
     const player = match.players.find((p) => p.playerId === c.playerId);
     if (!player) continue;
     sendMessage(c.socket, {
       type: "observation",
       observation: observationFor(match, player),
-      awaitingPlayers: awaiting,
+      awaitingCompanyIds: awaiting,
     });
   }
 }

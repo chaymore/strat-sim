@@ -1,7 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import type { TurnDecision } from "@strat-sim/shared";
 import {
-  awaitingPlayers,
+  awaitingCompanyIds,
   findPlayerByToken,
   getClass,
   getMatch,
@@ -61,7 +61,7 @@ export async function registerLlmRoutes(app: FastifyInstance) {
     if (!match.game) return reply.code(409).send({ error: "match not started" });
     return {
       observation: observationFor(match, player),
-      awaitingPlayers: awaitingPlayers(match),
+      awaitingCompanyIds: awaitingCompanyIds(match),
     };
   });
 

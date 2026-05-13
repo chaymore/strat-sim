@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import type {
+  CompanyId,
   LobbyState,
   ObservationView,
-  PlayerId,
   ServerMessage,
 } from "@strat-sim/shared";
 import { MatchSocket } from "./ws.js";
@@ -11,7 +11,7 @@ export interface MatchSocketState {
   socket: MatchSocket | null;
   lobby: LobbyState | null;
   observation: ObservationView | null;
-  awaitingPlayers: PlayerId[];
+  awaitingCompanyIds: CompanyId[];
   matchEnded: boolean;
   error: string | null;
 }
@@ -21,7 +21,7 @@ export function useMatchSocket(matchId: string | null, token: string | null): Ma
     socket: null,
     lobby: null,
     observation: null,
-    awaitingPlayers: [],
+    awaitingCompanyIds: [],
     matchEnded: false,
     error: null,
   });
@@ -41,14 +41,14 @@ export function useMatchSocket(matchId: string | null, token: string | null): Ma
             return {
               ...prev,
               observation: msg.observation,
-              awaitingPlayers: msg.awaitingPlayers,
+              awaitingCompanyIds: msg.awaitingCompanyIds,
               matchEnded: msg.observation.phase === "ended",
             };
           case "turn-resolved":
             return {
               ...prev,
               observation: msg.observation,
-              awaitingPlayers: [],
+              awaitingCompanyIds: [],
               matchEnded: msg.observation.phase === "ended",
             };
           case "match-ended":

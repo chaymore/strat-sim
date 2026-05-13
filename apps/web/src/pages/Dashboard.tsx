@@ -176,7 +176,11 @@ function MatchDetail({ audit }: { audit: MatchAudit }) {
         <div style={{ display: "grid", gap: 4 }}>
           {audit.players.map((p) => (
             <div key={p.playerId} style={{ display: "flex", justifyContent: "space-between", fontSize: 13 }}>
-              <span>{p.name}{p.isBot && <span style={{ color: colors.textDim }}> (bot)</span>}{p.role === "ai" && <span style={{ color: "#ffb84c" }}> (AI agent)</span>}</span>
+              <span>
+                {p.name}
+                {p.role === "bot" && <span style={{ color: colors.textDim }}> (bot)</span>}
+                {p.role === "ai" && <span style={{ color: "#ffb84c" }}> (AI agent)</span>}
+              </span>
               <span style={{ color: colors.textDim }}>{p.companyId}</span>
             </div>
           ))}

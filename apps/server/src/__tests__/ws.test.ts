@@ -120,6 +120,10 @@ describe("WebSocket protocol", () => {
 
     const resolved = await waitFor(a.incoming, "turn-resolved");
     expect(resolved.turn).toBe(1);
+    // Cross-check the field rename: observation arrived after start should
+    // carry awaitingCompanyIds, not awaitingPlayers.
+    const o = obsA;
+    expect(Array.isArray(o.awaitingCompanyIds)).toBe(true);
 
     a.ws.close();
     b.ws.close();
