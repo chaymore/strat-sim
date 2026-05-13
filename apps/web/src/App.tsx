@@ -1,47 +1,21 @@
-import { useState, useCallback, useMemo } from "react";
-import { Town, type SelectedConsumer } from "./Town.js";
-import { DecisionPanel } from "./DecisionPanel.js";
-import { EndScreen } from "./EndScreen.js";
-import { ConsumerTooltip } from "./ConsumerTooltip.js";
-import { useGame } from "./store.js";
+import { useRoute } from "./router.js";
+import { Landing } from "./pages/Landing.js";
+import { SoloGame } from "./pages/SoloGame.js";
+import { JoinClass } from "./pages/JoinClass.js";
+import { InstructorHome } from "./pages/InstructorHome.js";
+import { Dashboard } from "./pages/Dashboard.js";
+import { Lobby } from "./pages/Lobby.js";
+import { MultiplayerGame } from "./pages/MultiplayerGame.js";
 
 export function App() {
-  const { observation, rawConsumers, submitHumanTurn, newMatch } = useGame();
-  const [selected, setSelected] = useState<SelectedConsumer | null>(null);
-  const ended = observation.phase === "ended";
-
-  const handleSelect = useCallback((c: SelectedConsumer | null) => setSelected(c), []);
-
-  const companyNames = useMemo(() => {
-    const map: Record<string, string> = { [observation.you.id]: observation.you.name };
-    for (const c of observation.competitors) map[c.id] = c.name;
-    return map;
-  }, [observation]);
-
-  return (
-    <div style={{ display: "flex", height: "100%" }}>
-      <DecisionPanel
-        observation={observation}
-        onSubmit={(d) => {
-          setSelected(null);
-          submitHumanTurn(d);
-        }}
-        onNewMatch={() => {
-          setSelected(null);
-          newMatch();
-        }}
-      />
-      <main style={{ flex: 1, position: "relative" }}>
-        <Town observation={observation} rawConsumers={rawConsumers} onSelectConsumer={handleSelect} />
-        {selected && (
-          <ConsumerTooltip
-            consumer={selected}
-            onClose={() => setSelected(null)}
-            companyNames={companyNames}
-          />
-        )}
-        {ended && <EndScreen observation={observation} onPlayAgain={() => newMatch()} />}
-      </main>
-    </div>
-  );
+  const route = useRoute();
+  switch (route.kind) {
+    case "landing": return <Landing />;
+    case "solo": return <SoloGame />;
+    case "join": return <JoinClass />;
+    case "instructor": return <InstructorHome />;
+    case "dashboard": return <Dashboard classCode={route.classCode} />;
+    case "lobby": return <Lobby matchCode={route.matchCode} />;
+    case "play": return <MultiplayerGame matchId={route.matchId} />;
+  }
 }
