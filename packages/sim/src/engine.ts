@@ -243,6 +243,10 @@ export function resolveTurn(state: GameState): ResolveResult {
     }
   }
 
+  // 6b. Drift consumers — small jitter for unadopted, gentle pull toward
+  // company centroid for adopters ("they move closer to you if they bought your product").
+  driftConsumers(state, turnRng);
+
   // 7. Finance + brand updates + market cap.
   const totalCustomers = Object.values(state.companies).reduce((s, c) => s + c.customers, 0);
   const perCompany: Record<CompanyId, ResolvedCompany> = {};
@@ -316,6 +320,41 @@ export function resolveTurn(state: GameState): ResolveResult {
   }
 
   return { state, perCompany };
+}
+
+function driftConsumers(state: GameState, rng: Rng): void {
+  const { width, height } = DEFAULTS.worldSize;
+  const centroids: Record<CompanyId, { x: number; y: number; n: number }> = {};
+  for (const c of state.consumers) {
+    if (!c.adopted) continue;
+    const cur = centroids[c.adopted] ?? { x: 0, y: 0, n: 0 };
+    cur.x += c.position.x;
+    cur.y += c.position.y;
+    cur.n += 1;
+    centroids[c.adopted] = cur;
+  }
+  for (const id of Object.keys(centroids)) {
+    const cen = centroids[id]!;
+    cen.x /= cen.n;
+    cen.y /= cen.n;
+  }
+  const JITTER = 0.35;
+  const PULL = 0.06;
+  for (const c of state.consumers) {
+    let dx = (rng.next() - 0.5) * JITTER * 2;
+    let dy = (rng.next() - 0.5) * JITTER * 2;
+    if (c.adopted) {
+      const cen = centroids[c.adopted];
+      if (cen) {
+        dx += (cen.x - c.position.x) * PULL;
+        dy += (cen.y - c.position.y) * PULL;
+      }
+    }
+    c.position = {
+      x: Math.max(0, Math.min(width, c.position.x + dx)),
+      y: Math.max(0, Math.min(height, c.position.y + dy)),
+    };
+  }
 }
 
 function defaultDecision(id: CompanyId, price: number, subPrice: number): TurnDecision {

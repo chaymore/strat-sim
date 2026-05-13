@@ -8,6 +8,7 @@ import {
 import { appleBot, costcoBot, whoopBot } from "@strat-sim/sim/bots";
 import type {
   CompanyId,
+  Consumer,
   GameState,
   ObservationView,
   TurnDecision,
@@ -31,8 +32,11 @@ const bots: Record<string, (v: ObservationView) => TurnDecision> = {
 interface Store {
   game: GameState;
   observation: ObservationView;
+  rawConsumers: Consumer[];
+  selectedConsumerId: string | null;
   newMatch: (seed?: number) => void;
   submitHumanTurn: (decision: TurnDecision) => void;
+  setSelectedConsumer: (id: string | null) => void;
 }
 
 function freshGame(seed: number): GameState {
@@ -51,9 +55,16 @@ export const useGame = create<Store>((set, get) => {
   return {
     game: initial,
     observation: buildObservation(initial, HUMAN_ID),
+    rawConsumers: initial.consumers.slice(),
+    selectedConsumerId: null,
     newMatch: (seed) => {
       const g = freshGame(seed ?? (Date.now() & 0xffff));
-      set({ game: g, observation: buildObservation(g, HUMAN_ID) });
+      set({
+        game: g,
+        observation: buildObservation(g, HUMAN_ID),
+        rawConsumers: g.consumers.slice(),
+        selectedConsumerId: null,
+      });
     },
     submitHumanTurn: (decision) => {
       const { game } = get();
@@ -65,8 +76,12 @@ export const useGame = create<Store>((set, get) => {
         submitDecision(game, bot(view));
       }
       resolveTurn(game);
-      set({ observation: buildObservation(game, HUMAN_ID) });
+      set({
+        observation: buildObservation(game, HUMAN_ID),
+        rawConsumers: game.consumers.slice(),
+      });
     },
+    setSelectedConsumer: (id) => set({ selectedConsumerId: id }),
   };
 });
 

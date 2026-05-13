@@ -32,8 +32,10 @@ export const ADOPTION_WEIGHTS = {
 } as const;
 
 export const MARKET_CAP_MULT = {
-  ebitda: 12,
-  recurring: 8,
-  brandPerCustomer: 1.5,
-  growthCap: 10_000_000,
+  ebitda: 5,
+  recurringAnnual: 8,
+  customerLtv: 180_000,
+  brandFloor: 50,
+  rdPipeline: 80_000,
+  growthCap: 8_000_000,
 } as const;

@@ -126,6 +126,7 @@ export interface ObservationView {
   phase: GamePhase;
   maxTurns: number;
   marketCapWinThreshold: number;
+  winnerId: CompanyId | null;
   you: PrivateCompanyView;
   competitors: PublicCompanyView[];
   consumers: PublicConsumerView[];

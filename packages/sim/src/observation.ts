@@ -54,6 +54,7 @@ export function buildObservation(state: GameState, asCompanyId: CompanyId): Obse
     phase: state.phase,
     maxTurns: state.config.maxTurns,
     marketCapWinThreshold: state.config.marketCapWinThreshold,
+    winnerId: state.winnerId,
     you,
     competitors,
     consumers,

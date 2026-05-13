@@ -60,11 +60,15 @@ export function computeMarketCap(
 ): number {
   const recentEbitda = annualizedEbitda(company, ebitda);
   const growthBonus = computeGrowthBonus(company);
-  const cap =
-    MARKET_CAP_MULT.ebitda * Math.max(recentEbitda, 0) +
-    MARKET_CAP_MULT.recurring * recurringRevenue +
-    MARKET_CAP_MULT.brandPerCustomer * company.brandReputation * company.customers +
-    growthBonus;
+  const brandFactor =
+    (MARKET_CAP_MULT.brandFloor + company.brandReputation) / 100; // 0.5..1.5
+  const customerValue =
+    company.customers * MARKET_CAP_MULT.customerLtv * brandFactor;
+  const recurringValue =
+    recurringRevenue * 12 * MARKET_CAP_MULT.recurringAnnual; // annualize then multiple
+  const ebitdaValue = MARKET_CAP_MULT.ebitda * Math.max(recentEbitda, 0);
+  const rdValue = MARKET_CAP_MULT.rdPipeline * company.rdPoints;
+  const cap = customerValue + recurringValue + ebitdaValue + rdValue + growthBonus;
   return Math.max(0, cap);
 }
 
@@ -76,12 +80,14 @@ function annualizedEbitda(company: Company, currentEbitda: number): number {
 
 function computeGrowthBonus(company: Company): number {
   const h = company.history;
-  if (h.length < 3) return 0;
-  const past = h[h.length - 3]!.marketShare;
+  if (h.length < 2) return 0;
+  const window = Math.min(3, h.length);
+  const past = h[h.length - window]!.marketShare;
   const recent = h[h.length - 1]!.marketShare;
-  if (past <= 0.001) return Math.min(MARKET_CAP_MULT.growthCap, recent * 8_000_000);
-  const growth = (recent - past) / past;
-  return Math.max(-MARKET_CAP_MULT.growthCap, Math.min(MARKET_CAP_MULT.growthCap, growth * 5_000_000));
+  // Reward only meaningful growth, scaled by absolute share so flukes don't dominate.
+  const absoluteGain = Math.max(0, recent - past);
+  const bonus = absoluteGain * recent * MARKET_CAP_MULT.growthCap * 4;
+  return Math.min(MARKET_CAP_MULT.growthCap, bonus);
 }
 
 export function recordSnapshot(
