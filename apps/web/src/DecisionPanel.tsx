@@ -1,7 +1,23 @@
 import { useState } from "react";
 import type { FeatureAxis, ObservationView, TurnDecision } from "@strat-sim/shared";
+import { HistoryChart } from "./HistoryChart.js";
 
 const SEGMENTS: (FeatureAxis | "broad")[] = ["broad", "privacy", "capability", "design", "wellness"];
+
+const CONCEPT_HINTS: Record<string, string> = {
+  pricing:
+    "Pricing theory: lower prices widen your addressable market but compress margins. Higher prices fit fewer consumers' ceilings but each sale earns more. Find the segment that values your product most.",
+  rd:
+    "R&D builds your product's feature vector. Diminishing returns: the first few points on an axis matter more than the next ten. Match your features to a target segment's preferences.",
+  marketing:
+    "Marketing raises consumer awareness so they consider you when evaluating. 'Broad' reaches all consumers thinly; a targeted segment reaches the right people more efficiently — classic segmentation & positioning.",
+  capacity:
+    "Production capacity caps how many new customers you can serve per turn. If demand exceeds capacity, units are allocated randomly — so under-investing in capacity throws away market share.",
+  subscription:
+    "Recurring revenue is valued ~8× annual at exit. A high-margin one-time sale earns you cash now; a subscription compounds — but consumers won't subscribe if it's priced too aggressively.",
+  archetype:
+    "Archetypes (low-cost, premium, niche) describe your current product+price strategy. Pivoting between them mid-game is allowed but costly — like real positioning shifts.",
+};
 
 export function DecisionPanel({
   observation,
@@ -40,7 +56,14 @@ export function DecisionPanel({
         <Row label="Customers" value={String(observation.you.customers)} />
         <Row label="Brand" value={observation.you.brandReputation.toFixed(1)} />
         <Row label="Market cap" value={`$${fmt(observation.you.marketCap)}`} />
-        <Row label="Archetype" value={observation.you.archetype} />
+        <Row
+          label="Archetype"
+          value={observation.you.archetype}
+          hint={CONCEPT_HINTS.archetype}
+        />
+        <div style={{ marginTop: 8 }}>
+          <HistoryChart observation={observation} metric="marketCap" />
+        </div>
       </Section>
 
       <Section title="Competitors">
@@ -54,12 +77,18 @@ export function DecisionPanel({
 
       {!ended && (
         <>
-          <Section title="Pricing">
+          <Section title="Pricing" hint={CONCEPT_HINTS.pricing}>
             <NumInput label="Price ($)" value={price} onChange={setPrice} step={10} />
-            <NumInput label="Subscription ($/mo)" value={subPrice} onChange={setSubPrice} step={5} />
+            <NumInput
+              label="Subscription ($/mo)"
+              value={subPrice}
+              onChange={setSubPrice}
+              step={5}
+              hint={CONCEPT_HINTS.subscription}
+            />
           </Section>
 
-          <Section title={`R&D (${totalRd} pts × $10k = $${fmt(rdCost)})`}>
+          <Section title={`R&D (${totalRd} pts × $10k = $${fmt(rdCost)})`} hint={CONCEPT_HINTS.rd}>
             {(["privacy", "capability", "design", "wellness"] as const).map((axis) => (
               <NumInput
                 key={axis}
@@ -71,7 +100,7 @@ export function DecisionPanel({
             ))}
           </Section>
 
-          <Section title={`Marketing ($${fmt(marketing)})`}>
+          <Section title={`Marketing ($${fmt(marketing)})`} hint={CONCEPT_HINTS.marketing}>
             <NumInput label="Spend ($)" value={marketing} onChange={setMarketing} step={5_000} />
             <label style={{ display: "flex", justifyContent: "space-between" }}>
               Target segment
@@ -81,7 +110,7 @@ export function DecisionPanel({
             </label>
           </Section>
 
-          <Section title={`Capacity (+${capacity} units, $${fmt(capCost)})`}>
+          <Section title={`Capacity (+${capacity} units, $${fmt(capCost)})`} hint={CONCEPT_HINTS.capacity}>
             <NumInput label="Add capacity" value={capacity} onChange={setCapacity} step={5} />
           </Section>
 
@@ -107,13 +136,6 @@ export function DecisionPanel({
         </>
       )}
 
-      {ended && (
-        <Section title="Match over">
-          <p>Winner: <strong>{observation.competitors.find((c) => c.id === (observation.you.id))?.name ?? observation.you.name}</strong></p>
-          <button style={btnPrimary} onClick={onNewMatch}>Start a new match</button>
-        </Section>
-      )}
-
       <Section title="Log">
         <ul style={{ paddingLeft: 16, margin: 0, fontSize: 12, opacity: 0.8 }}>
           {observation.log.slice(-8).map((l, i) => <li key={i}>{l}</li>)}
@@ -123,19 +145,25 @@ export function DecisionPanel({
   );
 }
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+function Section({ title, children, hint }: { title: string; children: React.ReactNode; hint?: string }) {
   return (
     <section style={{ marginBottom: 14 }}>
-      <h3 style={{ fontSize: 13, textTransform: "uppercase", opacity: 0.7, margin: "0 0 6px" }}>{title}</h3>
+      <h3 style={{ fontSize: 13, textTransform: "uppercase", opacity: 0.7, margin: "0 0 6px", display: "flex", alignItems: "center", gap: 6 }}>
+        {title}
+        {hint && <Hint text={hint} />}
+      </h3>
       <div style={{ display: "grid", gap: 4 }}>{children}</div>
     </section>
   );
 }
 
-function Row({ label, value }: { label: string; value: string }) {
+function Row({ label, value, hint }: { label: string; value: string; hint?: string }) {
   return (
-    <div style={{ display: "flex", justifyContent: "space-between" }}>
-      <span style={{ opacity: 0.7 }}>{label}</span>
+    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+      <span style={{ opacity: 0.7, display: "inline-flex", alignItems: "center", gap: 6 }}>
+        {label}
+        {hint && <Hint text={hint} />}
+      </span>
       <span>{value}</span>
     </div>
   );
@@ -146,15 +174,20 @@ function NumInput({
   value,
   onChange,
   step,
+  hint,
 }: {
   label: string;
   value: number;
   onChange: (v: number) => void;
   step: number;
+  hint?: string;
 }) {
   return (
-    <label style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
-      <span style={{ opacity: 0.7 }}>{label}</span>
+    <label style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "center" }}>
+      <span style={{ opacity: 0.7, display: "inline-flex", alignItems: "center", gap: 6 }}>
+        {label}
+        {hint && <Hint text={hint} />}
+      </span>
       <input
         type="number"
         value={value}
@@ -163,6 +196,29 @@ function NumInput({
         style={{ width: 110, background: "#1f1f29", color: "#f5f5f7", border: "1px solid #2c2c38", borderRadius: 4, padding: "2px 6px" }}
       />
     </label>
+  );
+}
+
+function Hint({ text }: { text: string }) {
+  return (
+    <span
+      title={text}
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
+        width: 14,
+        height: 14,
+        borderRadius: "50%",
+        background: "#2c2c38",
+        color: "#bbbbcc",
+        fontSize: 10,
+        fontWeight: 600,
+        cursor: "help",
+      }}
+    >
+      ?
+    </span>
   );
 }
 
