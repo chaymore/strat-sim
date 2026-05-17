@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { DEFAULTS } from "@strat-sim/shared";
 import {
   computeMarketCap,
   computeMarketShare,
@@ -6,6 +7,8 @@ import {
   sumRD,
 } from "../finance.js";
 import { createCompany } from "../world.js";
+
+const HH = DEFAULTS.householdMultiplier;
 
 const baseDecision = (id: string) => ({
   companyId: id,
@@ -26,9 +29,9 @@ describe("finance", () => {
     co.product.subscriptionPrice = 20;
     co.subscribers = 50;
     const fin = computeTurnFinancials(co, baseDecision("a"), 30, 0);
-    expect(fin.revenue).toBe(30 * 300);
-    expect(fin.recurringRevenue).toBe(50 * 20);
-    expect(fin.cogs).toBe(30 * 80);
+    expect(fin.revenue).toBe(30 * 300 * HH);
+    expect(fin.recurringRevenue).toBe(50 * 20 * HH);
+    expect(fin.cogs).toBe(30 * 80 * HH);
     expect(fin.marketingSpend).toBe(10_000);
     expect(fin.rdSpend).toBe(10 * 10_000);
     expect(fin.capacitySpend).toBe(10 * 200);

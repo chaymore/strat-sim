@@ -23,10 +23,11 @@ export function computeTurnFinancials(
   unitsSold: number,
   newSubscribers: number,
 ): TurnFinancials {
-  const revenue = unitsSold * company.product.price;
+  const hh = DEFAULTS.householdMultiplier;
+  const revenue = unitsSold * company.product.price * hh;
   const recurringRevenue =
-    (company.subscribers + newSubscribers) * company.product.subscriptionPrice;
-  const cogs = unitsSold * DEFAULTS.baseUnitCost;
+    (company.subscribers + newSubscribers) * company.product.subscriptionPrice * hh;
+  const cogs = unitsSold * DEFAULTS.baseUnitCost * hh;
   const marketingSpend = decision.marketing.total;
   const rdSpend = sumRD(decision) * DEFAULTS.rdPointCost;
   const capacitySpend = decision.capacityInvestment * DEFAULTS.capacityCostPerUnit;

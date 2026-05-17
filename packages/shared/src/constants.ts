@@ -20,6 +20,10 @@ export const DEFAULTS = {
   marketingPointCost: 5_000,
   subscriptionMonthly: 0, // each company picks
   switcherFraction: 0.1, // fraction of existing customers that re-evaluate each turn
+  // Each consumer dot on the board represents a market segment of this many
+  // households. Revenue, recurring revenue, and COGS scale by this multiplier
+  // while customer counts, capacity, and adoption mechanics stay in segments.
+  householdMultiplier: 100,
 } as const;
 
 export const ADOPTION_WEIGHTS = {
