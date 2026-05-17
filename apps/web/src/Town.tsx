@@ -64,6 +64,7 @@ export function Town({
     if (!host) return;
     let cancelled = false;
     let initialized = false;
+    let ro: ResizeObserver | null = null;
     const app = new Application();
     app
       .init({ background: 0x14141a, resizeTo: host, antialias: true })
@@ -75,7 +76,6 @@ export function Town({
         }
         host.appendChild(app.canvas);
         const world = new Container();
-        world.position.set(host.clientWidth / 2, 80);
         app.stage.addChild(world);
 
         world.addChild(drawGround());
@@ -86,6 +86,33 @@ export function Town({
         world.addChild(consumerLayer);
         consumerLayerRef.current = consumerLayer;
         appRef.current = app;
+
+        const fitAndCenter = () => {
+          world.scale.set(1);
+          const local = world.getLocalBounds();
+          if (local.width === 0 || local.height === 0) return;
+          const pad = 24;
+          const sw = app.screen.width;
+          const sh = app.screen.height;
+          const scale = Math.min(
+            sw / (local.width + pad * 2),
+            sh / (local.height + pad * 2),
+            1,
+          );
+          world.scale.set(scale);
+          world.position.set(
+            sw / 2 - (local.x + local.width / 2) * scale,
+            sh / 2 - (local.y + local.height / 2) * scale,
+          );
+        };
+
+        fitAndCenter();
+        app.renderer.on("resize", fitAndCenter);
+        ro = new ResizeObserver(() => {
+          if (!appRef.current) return;
+          app.resize();
+        });
+        ro.observe(host);
 
         syncSprites(consumerLayer, spritesRef.current, observation, rawConsumers, onSelectConsumer ?? null);
 
@@ -117,6 +144,10 @@ export function Town({
 
     return () => {
       cancelled = true;
+      if (ro) {
+        try { ro.disconnect(); } catch { /* */ }
+        ro = null;
+      }
       if (initialized) {
         try { app.destroy(true, { children: true }); } catch { /* */ }
       }
@@ -148,7 +179,8 @@ function syncSprites(
 
   for (const c of observation.consumers) {
     seen.add(c.id);
-    const { px, py } = isoProject(c.position.x, c.position.y);
+    const tile = renderTile(c);
+    const { px, py } = isoProject(tile.x, tile.y);
     const color = c.adopted ? (COMPANY_COLORS[c.adopted] ?? 0xffffff) : NEUTRAL;
     let s = sprites.get(c.id);
     if (!s) {
@@ -247,6 +279,37 @@ const HQ_POSITIONS: Array<{ x: number; y: number }> = [
   { x: 35, y: 35 },
 ];
 const HQ_IDS = ["you", "low", "prem", "niche"];
+const HQ_BY_ROLE: Record<string, { x: number; y: number }> = Object.fromEntries(
+  HQ_IDS.map((id, i) => [id, HQ_POSITIONS[i]!]),
+);
+const ADOPTION_PULL = 0.55;
+
+function hashJitter(id: string): { dx: number; dy: number } {
+  let h = 0;
+  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) | 0;
+  const u = h >>> 0;
+  const angle = (u % 360) * (Math.PI / 180);
+  const radius = 1.2 + ((u >>> 9) & 0x07) * 0.45;
+  return { dx: Math.cos(angle) * radius, dy: Math.sin(angle) * radius };
+}
+
+function renderTile(c: {
+  id: string;
+  position: { x: number; y: number };
+  adopted: string | null;
+}): { x: number; y: number } {
+  if (c.adopted) {
+    const hq = HQ_BY_ROLE[c.adopted];
+    if (hq) {
+      const j = hashJitter(c.id);
+      return {
+        x: lerp(c.position.x, hq.x, ADOPTION_PULL) + j.dx,
+        y: lerp(c.position.y, hq.y, ADOPTION_PULL) + j.dy,
+      };
+    }
+  }
+  return { x: c.position.x, y: c.position.y };
+}
 
 function drawHQs(): Container {
   const layer = new Container();
