@@ -204,9 +204,15 @@ function NumInput({
       </span>
       <input
         type="number"
-        value={value}
+        value={value === 0 ? "" : value}
+        placeholder="0"
         step={step}
-        onChange={(e) => onChange(Number(e.target.value))}
+        onChange={(e) => {
+          const raw = e.target.value;
+          if (raw === "") return onChange(0);
+          const n = Number(raw);
+          if (!Number.isNaN(n)) onChange(n);
+        }}
         style={{ width: 110, background: "#1f1f29", color: "#f5f5f7", border: "1px solid #2c2c38", borderRadius: 4, padding: "2px 6px" }}
       />
     </label>
@@ -214,24 +220,38 @@ function NumInput({
 }
 
 function Hint({ text }: { text: string }) {
+  const [show, setShow] = useState(false);
   return (
     <span
-      title={text}
-      style={{
-        display: "inline-flex",
-        alignItems: "center",
-        justifyContent: "center",
-        width: 14,
-        height: 14,
-        borderRadius: "50%",
-        background: "#2c2c38",
-        color: "#bbbbcc",
-        fontSize: 10,
-        fontWeight: 600,
-        cursor: "help",
-      }}
+      style={{ position: "relative", display: "inline-flex" }}
+      onMouseEnter={() => setShow(true)}
+      onMouseLeave={() => setShow(false)}
     >
-      ?
+      <button
+        type="button"
+        aria-label={text}
+        onClick={() => setShow((s) => !s)}
+        onFocus={() => setShow(true)}
+        onBlur={() => setShow(false)}
+        style={{
+          display: "inline-flex",
+          alignItems: "center",
+          justifyContent: "center",
+          width: 14,
+          height: 14,
+          borderRadius: "50%",
+          background: "#2c2c38",
+          color: "#bbbbcc",
+          fontSize: 10,
+          fontWeight: 600,
+          cursor: "help",
+          border: "none",
+          padding: 0,
+        }}
+      >
+        ?
+      </button>
+      {show && <span style={tooltipStyle}>{text}</span>}
     </span>
   );
 }
@@ -239,6 +259,27 @@ function Hint({ text }: { text: string }) {
 function fmt(n: number): string {
   return Math.round(n).toLocaleString();
 }
+
+const tooltipStyle: React.CSSProperties = {
+  position: "absolute",
+  top: 20,
+  left: 0,
+  zIndex: 30,
+  width: 230,
+  background: "#0f0f16",
+  border: "1px solid #3a3a48",
+  borderRadius: 6,
+  padding: "8px 10px",
+  fontSize: 12,
+  fontWeight: 400,
+  lineHeight: 1.45,
+  textTransform: "none",
+  letterSpacing: 0,
+  color: "#dcdce4",
+  boxShadow: "0 8px 24px rgba(0,0,0,0.5)",
+  whiteSpace: "normal",
+  pointerEvents: "none",
+};
 
 const panelStyle: React.CSSProperties = {
   width: 360,
