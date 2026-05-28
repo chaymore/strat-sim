@@ -43,6 +43,16 @@ describe("finance", () => {
     expect(cap).toBeGreaterThanOrEqual(0);
   });
 
+  it("values a high-margin installed base above a thin-margin one", () => {
+    const premium = createCompany("a", "A");
+    const cheap = createCompany("b", "B");
+    premium.customers = cheap.customers = 100;
+    premium.brandReputation = cheap.brandReputation = 30;
+    premium.product.price = 500;
+    cheap.product.price = 150; // barely above the $80 unit cost
+    expect(computeMarketCap(premium, 0, 0)).toBeGreaterThan(computeMarketCap(cheap, 0, 0));
+  });
+
   it("market share sums to 1 across companies (when total > 0)", () => {
     const a = createCompany("a", "A");
     const b = createCompany("b", "B");

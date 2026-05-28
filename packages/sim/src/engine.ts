@@ -146,7 +146,8 @@ export function allDecisionsIn(state: GameState): boolean {
 export function resolveTurn(state: GameState): ResolveResult {
   if (state.phase !== "decision") throw new Error(`resolveTurn: bad phase ${state.phase}`);
   state.phase = "resolving";
-  const turnRng = new Rng(state.config.seed ^ ((state.turn + 1) * 0x9e3779b1));
+  const resolvedTurn = state.turn + 1;
+  const turnRng = new Rng(state.config.seed ^ (resolvedTurn * 0x9e3779b1));
   const neighbors = new NeighborIndex(state.consumers, DEFAULTS.womNeighborCount);
   const companyIds = Object.keys(state.companies);
 
@@ -168,11 +169,21 @@ export function resolveTurn(state: GameState): ResolveResult {
   decayAwareness(state);
   applyMarketing(state, state.pendingDecisions);
 
-  // 3. Decide who evaluates: all non-customers + a fraction of existing customers.
+  // 3. Decide who evaluates this turn:
+  //    - shoppers who don't own anything yet (still deciding if it's good enough),
+  //    - owners whose product has worn out and must be replaced,
+  //    - a small fraction of other owners who re-shop and might switch.
   const evaluators: number[] = [];
+  const dueForReplacement = new Set<number>();
   for (let i = 0; i < state.consumers.length; i++) {
     const c = state.consumers[i]!;
     if (c.adopted == null) {
+      evaluators.push(i);
+      continue;
+    }
+    const age = c.purchaseTurn == null ? Infinity : resolvedTurn - c.purchaseTurn;
+    if (age >= c.replacementInterval) {
+      dueForReplacement.add(i);
       evaluators.push(i);
     } else if (turnRng.next() < DEFAULTS.switcherFraction) {
       evaluators.push(i);
@@ -187,45 +198,69 @@ export function resolveTurn(state: GameState): ResolveResult {
   // 5. Apply with capacity gating. Random allocation when oversubscribed (decisions are pre-shuffled).
   const remainingCap: Record<CompanyId, number> = {};
   const newUnits: Record<CompanyId, number> = {};
+  const demand: Record<CompanyId, number> = {};
   const churn: Record<CompanyId, number> = {};
   for (const id of companyIds) {
     remainingCap[id] = state.companies[id]!.capacity;
     newUnits[id] = 0;
+    demand[id] = 0;
     churn[id] = 0;
   }
 
   for (const dec of decisions) {
-    const consumer = state.consumers[dec.consumerIdx]!;
+    const idx = dec.consumerIdx;
+    const consumer = state.consumers[idx]!;
     const prev = consumer.adopted;
     const target = dec.pickedCompanyId;
+    const due = dueForReplacement.has(idx);
 
-    if (target === prev) continue;
     if (target == null) {
-      // Switcher who picked no-adopt → churn.
-      if (prev) {
+      // Didn't find anything worth buying. An owner whose product wore out and
+      // who isn't replacing it lapses out of the market; others just keep waiting.
+      if (due && prev) {
         churn[prev] = (churn[prev] ?? 0) + 1;
         consumer.adopted = null;
         consumer.subscribed = false;
+        consumer.purchaseTurn = null;
       }
       continue;
     }
-    const cap = remainingCap[target] ?? 0;
-    if (cap <= 0) {
-      // Company can't fulfill — consumer keeps current allegiance (or stays unadopted).
+
+    // Re-shopping owner who sticks with a still-working product → no shipment.
+    if (target === prev && !due) continue;
+
+    // Wants a shipment (new buyer, switcher, or replacement).
+    demand[target] = (demand[target] ?? 0) + 1;
+    if ((remainingCap[target] ?? 0) <= 0) {
+      // Out of capacity — sale is lost. A replacement that can't be filled keeps
+      // limping along on the old unit rather than lapsing.
       continue;
     }
-    if (prev) churn[prev] = (churn[prev] ?? 0) + 1;
+
+    if (prev && prev !== target) churn[prev] = (churn[prev] ?? 0) + 1;
     consumer.adopted = target;
-    // Subscription opt-in proportional to subPrice attractiveness vs price.
-    const subPrice = state.companies[target]!.product.subscriptionPrice;
+    consumer.purchaseTurn = resolvedTurn;
+
+    // Subscription opt-in: cheaper subs and stronger brands attach better.
+    const co = state.companies[target]!;
+    const subPrice = co.product.subscriptionPrice;
     if (subPrice > 0) {
-      const attach = Math.max(0, Math.min(0.95, 0.6 - subPrice / 200));
+      const brandFactor = 0.6 + 0.4 * Math.min(1, co.brandReputation / 100);
+      const attach = Math.max(0, Math.min(0.9, (0.55 - subPrice / 240) * brandFactor));
       consumer.subscribed = turnRng.next() < attach;
     } else {
       consumer.subscribed = false;
     }
-    remainingCap[target] = cap - 1;
+    remainingCap[target] = (remainingCap[target] ?? 0) - 1;
     newUnits[target] = (newUnits[target] ?? 0) + 1;
+  }
+
+  // 5b. Subscription churn: existing subscribers (not the ones who just signed
+  // up this turn) cancel at a steady rate, so recurring revenue must be re-earned.
+  for (const c of state.consumers) {
+    if (c.subscribed && c.purchaseTurn !== resolvedTurn && turnRng.next() < DEFAULTS.subscriptionChurn) {
+      c.subscribed = false;
+    }
   }
 
   // 6. Recount customers + subscribers.
@@ -269,7 +304,7 @@ export function resolveTurn(state: GameState): ResolveResult {
 
     const marketShare = computeMarketShare(co, totalCustomers);
     const marketCap = computeMarketCap(co, fin.ebitda, fin.recurringRevenue);
-    recordSnapshot(co, state.turn + 1, fin, marketCap, marketShare);
+    recordSnapshot(co, resolvedTurn, fin, marketCap, marketShare, demand[id] ?? 0);
 
     // Update derived archetype label for UX clarity.
     co.archetype = inferArchetype(co);

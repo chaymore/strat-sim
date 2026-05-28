@@ -1,6 +1,8 @@
 import {
+  ADOPTER_CATEGORIES,
   DEFAULTS,
   NUM_AXES,
+  SEGMENTS,
   type CompanyId,
   type Company,
   type Consumer,
@@ -10,20 +12,16 @@ import {
 } from "@strat-sim/shared";
 import { Rng } from "./rng.js";
 
-/** Four latent customer segments, each with prefs centered on one axis. */
-const SEGMENT_CENTERS: FeatureVector[] = [
-  [0.7, 0.3, 0.4, 0.4], // privacy-first
-  [0.3, 0.8, 0.5, 0.4], // power users
-  [0.4, 0.4, 0.8, 0.3], // fashion-forward
-  [0.5, 0.4, 0.4, 0.8], // wellness/health
-];
-
-const SEGMENT_PRICE_RANGE: [number, number][] = [
-  [180, 420],
-  [350, 800],
-  [220, 600],
-  [200, 550],
-];
+/** Pick an adopter-category index by its population share. */
+function pickAdopterCategory(rng: Rng): number {
+  const r = rng.next();
+  let acc = 0;
+  for (let i = 0; i < ADOPTER_CATEGORIES.length; i++) {
+    acc += ADOPTER_CATEGORIES[i]!.share;
+    if (r <= acc) return i;
+  }
+  return ADOPTER_CATEGORIES.length - 1;
+}
 
 function normalize(v: number[]): FeatureVector {
   const sum = v.reduce((a, b) => a + b, 0) || 1;
@@ -40,16 +38,25 @@ export function createConsumers(rng: Rng, n: number): Consumer[] {
   const { width, height } = DEFAULTS.worldSize;
 
   for (let i = 0; i < n; i++) {
-    const segIdx = rng.int(0, SEGMENT_CENTERS.length);
-    const center = SEGMENT_CENTERS[segIdx]!;
+    const segIdx = rng.int(0, SEGMENTS.length);
+    const center = SEGMENTS[segIdx]!.center;
     const noisy: number[] = [];
     for (let a = 0; a < NUM_AXES; a++) {
       noisy.push(clamp01(center[a]! + rng.normal(0, 0.12)));
     }
     const prefs = normalize(noisy);
 
-    const [pmin, pmax] = SEGMENT_PRICE_RANGE[segIdx]!;
+    const [pmin, pmax] = SEGMENTS[segIdx]!.priceRange;
     const priceCeiling = rng.range(pmin, pmax);
+
+    const catIdx = pickAdopterCategory(rng);
+    const threshold = Math.max(
+      0.5,
+      ADOPTER_CATEGORIES[catIdx]!.threshold + rng.normal(0, 0.12),
+    );
+    const replacementInterval =
+      DEFAULTS.replacementMin +
+      rng.int(0, DEFAULTS.replacementMax - DEFAULTS.replacementMin + 1);
 
     // Light clustering: each segment hangs out in a quadrant, with overlap.
     const cx = (segIdx % 2) * width * 0.5 + width * 0.25;
@@ -62,6 +69,11 @@ export function createConsumers(rng: Rng, n: number): Consumer[] {
       position: { x, y },
       prefs,
       priceCeiling,
+      segment: segIdx,
+      adopterCategory: catIdx,
+      adoptionThreshold: threshold,
+      replacementInterval,
+      purchaseTurn: null,
       adopted: null,
       subscribed: false,
       awareness: {},

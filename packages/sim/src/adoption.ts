@@ -1,5 +1,6 @@
 import {
   ADOPTION_WEIGHTS,
+  DEFAULTS,
   NUM_AXES,
   type Company,
   type CompanyId,
@@ -15,12 +16,16 @@ function dot(a: FeatureVector, b: FeatureVector): number {
   return s;
 }
 
-/** Cosine-style fit in [0,1]. Both vectors are non-negative. */
-function featureFit(prefs: FeatureVector, features: FeatureVector): number {
-  const num = dot(prefs, features);
-  const denom =
-    Math.sqrt(dot(prefs, prefs) * dot(features, features)) || 1;
-  return Math.max(0, Math.min(1, num / denom));
+/**
+ * Absolute, preference-weighted product quality in [0,1]. Because prefs are
+ * normalized to sum to 1, this is the consumer's weighted average of the
+ * product's feature levels — i.e. "how good is this product on the things I
+ * actually care about." A fresh 0.5-across product scores ~0.5; investing R&D
+ * into the axes a segment values pushes it toward 1 (the "build it up over
+ * time until it's good enough" dynamic).
+ */
+function qualityFit(prefs: FeatureVector, features: FeatureVector): number {
+  return Math.max(0, Math.min(1, dot(prefs, features)));
 }
 
 function priceFit(price: number, ceiling: number): number {
@@ -40,6 +45,7 @@ export interface CompanyUtility {
   utility: number;
 }
 
+/** Per-company product appeal for one consumer (higher = more attractive). */
 export function utilitiesFor(
   consumer: Consumer,
   companies: Company[],
@@ -48,7 +54,7 @@ export function utilitiesFor(
 ): CompanyUtility[] {
   const w = ADOPTION_WEIGHTS;
   return companies.map((co) => {
-    const fit = featureFit(consumer.prefs, co.product.features);
+    const fit = qualityFit(consumer.prefs, co.product.features);
     const price = priceFit(co.product.price, consumer.priceCeiling);
     const brand = Math.min(1, co.brandReputation / 100);
     const wom = (womCounts[co.id] ?? 0) / Math.max(1, womK);
@@ -70,15 +76,24 @@ function softmax(values: number[]): number[] {
   return exps.map((e) => e / sum);
 }
 
+function logistic(x: number): number {
+  return 1 / (1 + Math.exp(-x));
+}
+
 export interface AdoptionDecision {
   consumerIdx: number;
   pickedCompanyId: CompanyId | null;
 }
 
 /**
- * For each evaluating consumer, sample a single choice (or no-adopt).
- * Caller is responsible for which consumers evaluate (new + a fraction of switchers)
- * and for enforcing capacity afterward.
+ * For each evaluating consumer, decide in two stages:
+ *   1. Will it buy at all? Purchase probability is a logistic on how far the
+ *      best available product's appeal exceeds the consumer's (diffusion)
+ *      threshold. Early on, only low-threshold innovators clear the bar.
+ *   2. If so, which company? A softmax over the competing products' appeals.
+ *
+ * Caller decides which consumers evaluate (new shoppers, a few switchers, and
+ * owners whose product wore out) and enforces capacity afterward.
  */
 export function rollAdoptions(
   rng: Rng,
@@ -101,10 +116,20 @@ export function rollAdoptions(
     }
 
     const utils = utilitiesFor(c, companies, womCounts, womK);
-    const allUtils = utils.map((u) => u.utility);
-    allUtils.push(ADOPTION_WEIGHTS.noAdoptUtility);
+    const appeals = utils.map((u) => u.utility);
+    const best = appeals.length ? Math.max(...appeals) : 0;
 
-    const probs = softmax(allUtils);
+    // Stage 1: diffusion gate.
+    const buyProb = logistic(
+      DEFAULTS.purchaseLogisticK * (best - c.adoptionThreshold),
+    );
+    if (rng.next() > buyProb) {
+      out.push({ consumerIdx: idx, pickedCompanyId: null });
+      continue;
+    }
+
+    // Stage 2: choose among competitors by appeal.
+    const probs = softmax(appeals);
     const r = rng.next();
     let acc = 0;
     let pickedIdx = probs.length - 1;
@@ -115,9 +140,7 @@ export function rollAdoptions(
         break;
       }
     }
-    const pickedCompanyId =
-      pickedIdx === probs.length - 1 ? null : utils[pickedIdx]!.companyId;
-    out.push({ consumerIdx: idx, pickedCompanyId });
+    out.push({ consumerIdx: idx, pickedCompanyId: utils[pickedIdx]?.companyId ?? null });
   }
   return out;
 }
