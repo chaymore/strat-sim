@@ -111,6 +111,8 @@ export function DecisionPanel({
           </Section>
 
           <Section title={`Capacity (+${capacity} units, $${fmt(capCost)})`} hint={CONCEPT_HINTS.capacity}>
+            <Row label="Current /turn" value={String(observation.you.capacity)} />
+            <CapacityNote observation={observation} />
             <NumInput label="Add capacity" value={capacity} onChange={setCapacity} step={5} />
           </Section>
 
@@ -142,6 +144,18 @@ export function DecisionPanel({
         </ul>
       </Section>
     </aside>
+  );
+}
+
+function CapacityNote({ observation }: { observation: ObservationView }) {
+  const last = observation.you.history.at(-1);
+  if (!last) return null;
+  const lost = Math.max(0, last.demand - last.unitsSold);
+  return (
+    <div style={{ fontSize: 11, opacity: 0.8, color: lost > 0 ? "#ff9e6d" : "#9aff9a" }}>
+      Last turn: shipped {last.unitsSold} of {last.demand} demand
+      {lost > 0 ? ` — ${lost} lost to capacity` : " — all demand met"}
+    </div>
   );
 }
 

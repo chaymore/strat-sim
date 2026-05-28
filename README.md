@@ -139,17 +139,28 @@ pnpm sim:demo            # bot tournament; sanity-checks balance
 
 ## Game design (v0.1+)
 
-- 250 simulated consumers, each with a 4-axis preference vector (privacy,
-  capability, design, wellness) and a price ceiling. 4 latent customer
+- A latent pool of ~600 simulated consumers, each with a 4-axis preference
+  vector (privacy, capability, design, wellness), a price ceiling, a latent
+  segment, and a Rogers "diffusion of innovations" adopter category. 4 customer
   segments cluster in the town.
 - Each turn (simultaneous): set price, set subscription price, allocate R&D
   across the 4 axes, set marketing budget + target segment, invest in capacity.
-- Adoption probability per consumer = softmax over feature fit + price fit +
-  brand + word-of-mouth (k-nearest neighbors) + awareness, with a "no-adopt"
-  option. Demand above capacity is allocated randomly.
-- Market cap = customer-LTV-weighted-by-brand + recurring annual × 8 +
-  trailing EBITDA × 5 + R&D pipeline + capped growth bonus. Win at $50M cap
-  or highest cap after 10 turns.
+- Product **appeal** to a consumer = preference-weighted *absolute* feature
+  quality + price fit + brand + word-of-mouth (k-nearest neighbors) + awareness.
+  Because quality is absolute, R&D visibly makes a product "good enough" over
+  time rather than just re-pointing it.
+- Adoption is two-stage: (1) a diffusion gate — the consumer buys only when the
+  best product's appeal clears its personal threshold, so early on only
+  low-threshold innovators bite and the mainstream comes online as products
+  improve; (2) a softmax over competing products to pick a brand. Demand above
+  capacity is lost.
+- Owned products wear out after 3–4 turns and must be replaced (repeat hardware
+  demand). Subscribers churn at a steady rate, so recurring revenue must be
+  re-earned.
+- Market cap = installed-base value (scaled by brand **and** hardware gross
+  margin, so a loss-leader land-grab isn't an auto-win) + recurring annual × 6 +
+  trailing EBITDA × 6 + R&D pipeline + capped growth bonus. Win at $50M cap or
+  highest cap after 10 turns.
 
 ## LLM API
 

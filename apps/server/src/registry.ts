@@ -206,7 +206,7 @@ export function startMatch(match: ServerMatch, withBotFill = true): void {
   match.game = createGame({
     matchId: match.matchId,
     seed,
-    numConsumers: 250,
+    numConsumers: 600,
     maxTurns: 10,
     marketCapWinThreshold: 50_000_000,
     companies: match.players.map((p) => ({ id: p.companyId, name: p.name })),

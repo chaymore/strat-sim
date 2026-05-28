@@ -39,6 +39,8 @@ export interface TurnSnapshot {
   ebitda: number;
   marketCap: number;
   marketShare: number;
+  unitsSold: number; // units shipped this turn (new + switchers + replacements)
+  demand: number; // consumers who wanted to buy from this company before capacity gating
 }
 
 export interface Consumer {
@@ -46,6 +48,16 @@ export interface Consumer {
   position: Position;
   prefs: FeatureVector;
   priceCeiling: number;
+  /** Latent segment index (see SEGMENTS in constants). */
+  segment: number;
+  /** Rogers adopter-category index (see ADOPTER_CATEGORIES). */
+  adopterCategory: number;
+  /** Product appeal this consumer demands before it will buy at all. */
+  adoptionThreshold: number;
+  /** Turns until an owned product wears out and must be replaced. */
+  replacementInterval: number;
+  /** Turn on which the current product was purchased (null if never). */
+  purchaseTurn: number | null;
   adopted: CompanyId | null;
   subscribed: boolean;
   awareness: Record<CompanyId, number>;
@@ -105,6 +117,7 @@ export interface PublicCompanyView {
   marketShare: number;
   brandReputation: number;
   marketCap: number;
+  history: TurnSnapshot[];
 }
 
 export interface PublicConsumerView {
@@ -117,7 +130,22 @@ export interface PrivateCompanyView extends PublicCompanyView {
   cash: number;
   capacity: number;
   rdPoints: number;
-  history: TurnSnapshot[];
+}
+
+/** Aggregate, per-segment market intel shown in the Segments tab. */
+export interface SegmentView {
+  key: FeatureAxis;
+  name: string;
+  blurb: string;
+  /** Segment's average preference weights across the four axes. */
+  prefs: FeatureVector;
+  priceRange: readonly [number, number];
+  /** Number of consumers in this segment. */
+  size: number;
+  /** How many of them currently own any product (adoption progress). */
+  adopted: number;
+  /** Median price ceiling for the segment. */
+  medianPriceCeiling: number;
 }
 
 export interface ObservationView {
@@ -130,5 +158,9 @@ export interface ObservationView {
   you: PrivateCompanyView;
   competitors: PublicCompanyView[];
   consumers: PublicConsumerView[];
+  segments: SegmentView[];
+  /** Size of the latent market and how many have adopted anything yet. */
+  totalMarket: number;
+  totalAdopted: number;
   log: string[];
 }

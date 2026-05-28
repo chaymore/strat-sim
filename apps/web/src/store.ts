@@ -43,7 +43,7 @@ function freshGame(seed: number): GameState {
   return createGame({
     matchId: `local-${seed}`,
     seed,
-    numConsumers: 250,
+    numConsumers: 600,
     maxTurns: 10,
     marketCapWinThreshold: 50_000_000,
     companies: lineup.map(({ id, name }) => ({ id, name })),

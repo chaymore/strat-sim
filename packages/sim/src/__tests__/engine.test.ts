@@ -65,6 +65,54 @@ describe("resolveTurn", () => {
     expect(perCompany.a?.unitsSold).toBeLessThanOrEqual(5);
   });
 
+  it("holds most of the market back until products prove themselves (diffusion)", () => {
+    const game = createGame({
+      matchId: "m",
+      seed: 7,
+      numConsumers: 400,
+      maxTurns: 10,
+      marketCapWinThreshold: 999_999_999,
+      companies: [
+        { id: "a", name: "A" },
+        { id: "b", name: "B" },
+      ],
+    });
+    submitDecision(game, fixedDecision("a"));
+    submitDecision(game, fixedDecision("b"));
+    resolveTurn(game);
+    const adopted = game.consumers.filter((c) => c.adopted != null).length;
+    // Only early adopters should bite on turn 1 — nowhere near the whole pool.
+    expect(adopted).toBeGreaterThan(0);
+    expect(adopted).toBeLessThan(game.consumers.length * 0.4);
+  });
+
+  it("worn-out products are replaced, generating repeat sales", () => {
+    const game = createGame({
+      matchId: "m",
+      seed: 3,
+      numConsumers: 60,
+      maxTurns: 10,
+      marketCapWinThreshold: 999_999_999,
+      companies: [{ id: "a", name: "A" }],
+    });
+    // Everyone already owns A, bought last turn, and is due to replace now with a
+    // low bar so they re-buy rather than lapse.
+    for (const c of game.consumers) {
+      c.adopted = "a";
+      c.subscribed = false;
+      c.purchaseTurn = 0;
+      c.replacementInterval = 1;
+      c.adoptionThreshold = 0.4;
+      c.priceCeiling = 1000;
+    }
+    game.companies.a!.capacity = 1000;
+    submitDecision(game, fixedDecision("a"));
+    const { perCompany } = resolveTurn(game);
+    // No net new customers are possible (everyone already owns A), yet units ship
+    // because worn-out products are being replaced.
+    expect(perCompany.a?.unitsSold).toBeGreaterThan(0);
+  });
+
   it("ends the game when a company crosses the market cap threshold", () => {
     const game = createGame({
       matchId: "m",

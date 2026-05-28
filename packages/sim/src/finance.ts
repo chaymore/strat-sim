@@ -62,8 +62,13 @@ export function computeMarketCap(
   const growthBonus = computeGrowthBonus(company);
   const brandFactor =
     (MARKET_CAP_MULT.brandFloor + company.brandReputation) / 100; // 0.5..1.5
+  // Per-customer value scales with hardware gross margin: an installed base won
+  // by selling near cost is worth far less than a high-margin one, so a
+  // loss-leader land-grab no longer auto-wins.
+  const unitMargin = company.product.price - DEFAULTS.baseUnitCost;
+  const marginFactor = Math.max(0.5, Math.min(1.3, 0.45 + unitMargin / 650));
   const customerValue =
-    company.customers * MARKET_CAP_MULT.customerLtv * brandFactor;
+    company.customers * MARKET_CAP_MULT.customerLtv * brandFactor * marginFactor;
   const recurringValue =
     recurringRevenue * 12 * MARKET_CAP_MULT.recurringAnnual; // annualize then multiple
   const ebitdaValue = MARKET_CAP_MULT.ebitda * Math.max(recentEbitda, 0);
@@ -96,6 +101,7 @@ export function recordSnapshot(
   fin: TurnFinancials,
   marketCap: number,
   marketShare: number,
+  demand: number,
 ): TurnSnapshot {
   const snap: TurnSnapshot = {
     turn,
@@ -105,6 +111,8 @@ export function recordSnapshot(
     ebitda: fin.ebitda,
     marketCap,
     marketShare,
+    unitsSold: fin.unitsSold,
+    demand,
   };
   company.history.push(snap);
   return snap;

@@ -19,7 +19,7 @@ function runMatch(seed: number, lineup: { id: string; name: string; bot: string 
   const game = createGame({
     matchId: `demo-${seed}`,
     seed,
-    numConsumers: 250,
+    numConsumers: 600,
     maxTurns: 10,
     marketCapWinThreshold: 50_000_000,
     companies: lineup.map(({ id, name }) => ({ id, name })),
