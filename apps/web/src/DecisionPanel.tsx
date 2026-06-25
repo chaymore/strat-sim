@@ -1,14 +1,18 @@
 import { useState } from "react";
-import type { FeatureAxis, ObservationView, TurnDecision } from "@strat-sim/shared";
+import type { FeatureAxis, FeatureVector, ObservationView, TurnDecision } from "@strat-sim/shared";
+import { frontierVector, growCapabilities, unitCost } from "@strat-sim/sim";
 import { HistoryChart } from "./HistoryChart.js";
 
 const SEGMENTS: (FeatureAxis | "broad")[] = ["broad", "privacy", "capability", "design", "wellness"];
+const AXES = ["privacy", "capability", "design", "wellness"] as const;
 
 const CONCEPT_HINTS: Record<string, string> = {
   pricing:
     "Pricing theory: lower prices widen your addressable market but compress margins. Higher prices fit fewer consumers' ceilings but each sale earns more. Find the segment that values your product most.",
   rd:
-    "R&D builds your product's feature vector. Diminishing returns: the first few points on an axis matter more than the next ten. Match your features to a target segment's preferences.",
+    "R&D grows your per-axis capability stock, which raises the quality frontier (the most you can ship on that axis) and lowers what that quality costs to build. Diminishing returns — focus a few axes to build a real edge.",
+  quality:
+    "Quality is what you actually ship, capped by your capability frontier. Pushing quality toward the frontier costs more per unit; pulling it back trades quality for margin. Ship at the frontier to show R&D gains immediately.",
   marketing:
     "Marketing raises consumer awareness so they consider you when evaluating. 'Broad' reaches all consumers thinly; a targeted segment reaches the right people more efficiently — classic segmentation & positioning.",
   capacity:
@@ -34,12 +38,24 @@ export function DecisionPanel({
   const [marketing, setMarketing] = useState(50_000);
   const [segment, setSegment] = useState<FeatureAxis | "broad">("broad");
   const [capacity, setCapacity] = useState(20);
+  const [shipAtFrontier, setShipAtFrontier] = useState(true);
+  const [quality, setQuality] = useState<number[]>([...observation.you.product.features]);
 
   const totalRd = rd.privacy + rd.capability + rd.design + rd.wellness;
   const rdCost = totalRd * 10_000;
   const capCost = capacity * 200;
   const totalSpend = rdCost + marketing + capCost;
   const overBudget = totalSpend > observation.you.cash;
+
+  // Project this turn's capability (R&D applies before products ship), so the
+  // frontier ceiling and unit-cost preview reflect the investment being made.
+  const projectedCaps = growCapabilities(observation.you.capabilities, rd);
+  const projectedFrontier = frontierVector(projectedCaps);
+  const effectiveQuality: FeatureVector = (shipAtFrontier
+    ? projectedFrontier
+    : [0, 1, 2, 3].map((i) => Math.min(quality[i] ?? 0, projectedFrontier[i] ?? 0))) as FeatureVector;
+  const projUnitCost = unitCost(effectiveQuality, projectedCaps);
+  const projMargin = price - projUnitCost;
 
   const ended = observation.phase === "ended";
 
@@ -88,7 +104,7 @@ export function DecisionPanel({
             />
           </Section>
 
-          <Section title={`R&D (${totalRd} pts × $10k = $${fmt(rdCost)})`} hint={CONCEPT_HINTS.rd}>
+          <Section title={`Capability R&D (${totalRd} pts × $10k = $${fmt(rdCost)})`} hint={CONCEPT_HINTS.rd}>
             {(["privacy", "capability", "design", "wellness"] as const).map((axis) => (
               <NumInput
                 key={axis}
@@ -98,6 +114,48 @@ export function DecisionPanel({
                 step={1}
               />
             ))}
+          </Section>
+
+          <Section
+            title={`Quality to ship — $${fmt(projUnitCost)}/unit, margin $${fmt(projMargin)}`}
+            hint={CONCEPT_HINTS.quality}
+          >
+            <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, marginBottom: 4 }}>
+              <input
+                type="checkbox"
+                checked={shipAtFrontier}
+                onChange={(e) => setShipAtFrontier(e.target.checked)}
+              />
+              Ship at max quality (frontier)
+            </label>
+            {!shipAtFrontier &&
+              AXES.map((axis, i) => {
+                const ceiling = projectedFrontier[i] ?? 0;
+                const val = Math.min(quality[i] ?? 0, ceiling);
+                return (
+                  <div key={axis} style={{ display: "grid", gridTemplateColumns: "92px 1fr 40px", gap: 8, alignItems: "center" }}>
+                    <span style={{ fontSize: 12, opacity: 0.8 }}>{axis}</span>
+                    <input
+                      type="range"
+                      min={0}
+                      max={ceiling}
+                      step={0.01}
+                      value={val}
+                      onChange={(e) => {
+                        const next = [...quality];
+                        next[i] = Number(e.target.value);
+                        setQuality(next);
+                      }}
+                    />
+                    <span style={{ fontSize: 11, opacity: 0.7, textAlign: "right" }}>{val.toFixed(2)}</span>
+                  </div>
+                );
+              })}
+            <div style={{ fontSize: 11, opacity: 0.55, marginTop: 2 }}>
+              {shipAtFrontier
+                ? "Shipping your best on every axis — uncheck to pull quality back for margin."
+                : `Frontier this turn: ${projectedFrontier.map((f) => f.toFixed(2)).join(" / ")}`}
+            </div>
           </Section>
 
           <Section title={`Marketing ($${fmt(marketing)})`} hint={CONCEPT_HINTS.marketing}>
@@ -128,6 +186,7 @@ export function DecisionPanel({
                 price,
                 subscriptionPrice: subPrice,
                 rd,
+                quality: effectiveQuality,
                 marketing: { total: marketing, segmentTarget: segment },
                 capacityInvestment: capacity,
               })

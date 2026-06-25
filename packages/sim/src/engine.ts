@@ -2,6 +2,7 @@ import {
   DEFAULTS,
   type Company,
   type CompanyId,
+  type FeatureVector,
   type GameState,
   type TurnDecision,
 } from "@strat-sim/shared";
@@ -33,6 +34,10 @@ export interface ResolvedCompany {
 }
 
 const EPS = 1e-9;
+
+function clamp01(x: number): number {
+  return x < 0 ? 0 : x > 1 ? 1 : x;
+}
 
 function applyMarketing(state: GameState, decisions: Record<CompanyId, TurnDecision>): void {
   // Simple model: marketing spend → awareness increase, with optional segment boost.
@@ -109,6 +114,18 @@ export function sanitizeDecision(company: Company, raw: TurnDecision): TurnDecis
     price: Math.max(0, raw.price),
     subscriptionPrice: Math.max(0, raw.subscriptionPrice),
     rd,
+    // Carry the desired shipped quality through (clamped to [0,1]); resolveTurn
+    // further clamps each axis to the post-investment capability frontier.
+    ...(raw.quality
+      ? {
+          quality: [
+            clamp01(raw.quality[0] ?? 0),
+            clamp01(raw.quality[1] ?? 0),
+            clamp01(raw.quality[2] ?? 0),
+            clamp01(raw.quality[3] ?? 0),
+          ] as FeatureVector,
+        }
+      : {}),
     marketing: { total: mktFinal, segmentTarget: raw.marketing.segmentTarget },
     capacityInvestment: Math.floor(capFinalCost / DEFAULTS.capacityCostPerUnit),
     positioningStatement: raw.positioningStatement ?? "",

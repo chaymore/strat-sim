@@ -7,14 +7,16 @@ import { Briefing } from "./Briefing.js";
 import { SegmentsTab } from "./tabs/SegmentsTab.js";
 import { CompetitorsTab } from "./tabs/CompetitorsTab.js";
 import { CapacityTab } from "./tabs/CapacityTab.js";
+import { ManufacturingTab } from "./tabs/ManufacturingTab.js";
 import { companyColorHex as colorHex } from "./colors.js";
 
-type Tab = "map" | "segments" | "competitors" | "capacity";
+type Tab = "map" | "segments" | "competitors" | "manufacturing" | "capacity";
 
 const TABS: { key: Tab; label: string }[] = [
   { key: "map", label: "Town map" },
   { key: "segments", label: "Segments" },
   { key: "competitors", label: "Competitors" },
+  { key: "manufacturing", label: "Manufacturing" },
   { key: "capacity", label: "Capacity" },
 ];
 
@@ -88,6 +90,7 @@ export function GameView({
           <div style={{ maxWidth: 760, margin: "0 auto" }}>
             {tab === "segments" && <SegmentsTab observation={observation} />}
             {tab === "competitors" && <CompetitorsTab observation={observation} />}
+            {tab === "manufacturing" && <ManufacturingTab observation={observation} />}
             {tab === "capacity" && <CapacityTab observation={observation} />}
           </div>
         </div>

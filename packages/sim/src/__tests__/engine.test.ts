@@ -70,6 +70,32 @@ describe("resolveTurn", () => {
     expect(perCompany.a?.unitsSold).toBeLessThanOrEqual(5);
   });
 
+  it("ships the chosen quality, clamped to the capability frontier", () => {
+    const game = createGame({
+      matchId: "m",
+      seed: 4,
+      numConsumers: 40,
+      maxTurns: 10,
+      marketCapWinThreshold: 999_999_999,
+      companies: [{ id: "a", name: "A" }],
+    });
+    // No R&D, so the frontier stays at the starting 0.5. Ask for one axis below
+    // the frontier (shipped as-is) and one above it (clamped down to the frontier).
+    submitDecision(game, {
+      companyId: "a",
+      price: 300,
+      subscriptionPrice: 0,
+      rd: { privacy: 0, capability: 0, design: 0, wellness: 0 },
+      quality: [0.3, 0.9, 0.3, 0.3],
+      marketing: { total: 0, segmentTarget: "broad" },
+      capacityInvestment: 0,
+    });
+    resolveTurn(game);
+    const f = game.companies.a!.product.features;
+    expect(f[0]).toBeCloseTo(0.3, 5); // below frontier → shipped exactly
+    expect(f[1]).toBeLessThanOrEqual(0.5 + 1e-9); // above frontier → clamped
+  });
+
   it("holds most of the market back until products prove themselves (diffusion)", () => {
     const game = createGame({
       matchId: "m",
