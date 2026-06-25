@@ -11,6 +11,7 @@ import {
   randomBot,
   whoopBot,
 } from "@strat-sim/sim/bots";
+import { DEFAULTS } from "@strat-sim/shared";
 import type {
   ClassCode,
   CompanyId,
@@ -206,9 +207,9 @@ export function startMatch(match: ServerMatch, withBotFill = true): void {
   match.game = createGame({
     matchId: match.matchId,
     seed,
-    numConsumers: 600,
-    maxTurns: 10,
-    marketCapWinThreshold: 50_000_000,
+    numConsumers: DEFAULTS.numConsumers,
+    maxTurns: DEFAULTS.maxTurns,
+    marketCapWinThreshold: DEFAULTS.marketCapWinThreshold,
     companies: match.players.map((p) => ({ id: p.companyId, name: p.name })),
   });
 }
@@ -339,7 +340,7 @@ export function classroomToPublic(c: Classroom): PublicClassroom {
         matchCode: m.matchCode,
         status: m.game ? (m.game.phase === "ended" ? "ended" : "playing") : "lobby",
         turn: m.game?.turn ?? 0,
-        maxTurns: m.game?.config.maxTurns ?? 10,
+        maxTurns: m.game?.config.maxTurns ?? DEFAULTS.maxTurns,
         playerCount: m.players.filter((p) => !p.isBot).length,
         seatCount: m.seatCount,
         createdAt: m.createdAt,

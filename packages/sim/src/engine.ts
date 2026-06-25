@@ -246,7 +246,12 @@ export function resolveTurn(state: GameState): ResolveResult {
     const subPrice = co.product.subscriptionPrice;
     if (subPrice > 0) {
       const brandFactor = 0.6 + 0.4 * Math.min(1, co.brandReputation / 100);
-      const attach = Math.max(0, Math.min(0.9, (0.55 - subPrice / 240) * brandFactor));
+      // Hesitance: people commit to recurring billing more reluctantly than a
+      // one-time purchase, so the attach rate is damped below the price/brand fit.
+      const attach = Math.max(
+        0,
+        Math.min(0.9, (0.55 - subPrice / 240) * brandFactor * DEFAULTS.subscriptionHesitance),
+      );
       consumer.subscribed = turnRng.next() < attach;
     } else {
       consumer.subscribed = false;
@@ -293,12 +298,14 @@ export function resolveTurn(state: GameState): ResolveResult {
     const fin = computeTurnFinancials(co, d, unitsSold, newSubs);
     co.cash += fin.ebitda;
 
-    // Brand reputation: marketing helps, churn hurts.
+    // Brand reputation is a stock: it erodes a fixed fraction each turn and is
+    // renewed by marketing spend and good sales (churn erodes it further).
     const brandDelta =
       Math.log10(1 + fin.marketingSpend / 5_000) * 0.6 -
       (churn[id] ?? 0) * 0.3 +
       (unitsSold > 0 ? Math.log10(1 + unitsSold) * 0.5 : 0);
-    co.brandReputation = Math.max(0, Math.min(100, co.brandReputation + brandDelta));
+    const decayed = co.brandReputation * (1 - DEFAULTS.brandDecayRate);
+    co.brandReputation = Math.max(0, Math.min(100, decayed + brandDelta));
 
     co.rdPoints += sumRD(d);
 

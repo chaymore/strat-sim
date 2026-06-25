@@ -6,6 +6,7 @@ import {
   submitDecision,
 } from "@strat-sim/sim";
 import { appleBot, costcoBot, whoopBot } from "@strat-sim/sim/bots";
+import { DEFAULTS } from "@strat-sim/shared";
 import type {
   CompanyId,
   Consumer,
@@ -43,9 +44,9 @@ function freshGame(seed: number): GameState {
   return createGame({
     matchId: `local-${seed}`,
     seed,
-    numConsumers: 600,
-    maxTurns: 10,
-    marketCapWinThreshold: 50_000_000,
+    numConsumers: DEFAULTS.numConsumers,
+    maxTurns: DEFAULTS.maxTurns,
+    marketCapWinThreshold: DEFAULTS.marketCapWinThreshold,
     companies: lineup.map(({ id, name }) => ({ id, name })),
   });
 }

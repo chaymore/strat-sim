@@ -6,13 +6,13 @@ export const NUM_AXES = FEATURE_AXES.length;
 export const DEFAULTS = {
   numConsumers: 600, // large latent pool; only a fraction buy each turn
   worldSize: { width: 40, height: 40 },
-  maxTurns: 10,
+  maxTurns: 16, // longer game so the gradual diffusion curve has room to play out
   turnTimerSeconds: 90,
   startingCash: 1_000_000,
   startingCapacity: 50,
   startingBrand: 20,
   startingFeatures: [0.5, 0.5, 0.5, 0.5] as const,
-  marketCapWinThreshold: 50_000_000,
+  marketCapWinThreshold: 30_000_000, // interim: reflects the halved customerLtv; finalized with the capability/margin work
   womNeighborCount: 6,
   baseUnitCost: 80,
   capacityCostPerUnit: 200,
@@ -23,6 +23,8 @@ export const DEFAULTS = {
   replacementMin: 3, // owned products wear out after 3..4 turns and must be replaced
   replacementMax: 4,
   subscriptionChurn: 0.07, // chance a subscriber cancels in a given turn
+  subscriptionHesitance: 0.65, // global friction: buyers commit to recurring billing more reluctantly than a one-time purchase (scales attach toward 0)
+  brandDecayRate: 0.05, // brand is a stock that erodes ~5%/turn toward 0 unless renewed by marketing and good sales
   purchaseLogisticK: 2.6, // steepness of the buy-probability curve around a consumer's threshold
 } as const;
 

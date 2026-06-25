@@ -1,5 +1,6 @@
 import { createGame, resolveTurn, submitDecision, buildObservation } from "../index.js";
 import { appleBot, costcoBot, randomBot, whoopBot } from "../bots/index.js";
+import { DEFAULTS } from "@strat-sim/shared";
 import type { ObservationView, TurnDecision } from "@strat-sim/shared";
 
 type BotFn = (v: ObservationView) => TurnDecision;
@@ -19,9 +20,9 @@ function runMatch(seed: number, lineup: { id: string; name: string; bot: string 
   const game = createGame({
     matchId: `demo-${seed}`,
     seed,
-    numConsumers: 600,
-    maxTurns: 10,
-    marketCapWinThreshold: 50_000_000,
+    numConsumers: DEFAULTS.numConsumers,
+    maxTurns: DEFAULTS.maxTurns,
+    marketCapWinThreshold: DEFAULTS.marketCapWinThreshold,
     companies: lineup.map(({ id, name }) => ({ id, name })),
   });
 
