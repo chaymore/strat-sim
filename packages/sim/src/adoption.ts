@@ -1,5 +1,6 @@
 import {
   ADOPTION_WEIGHTS,
+  BASS,
   DEFAULTS,
   NUM_AXES,
   type Company,
@@ -87,9 +88,16 @@ export interface AdoptionDecision {
 
 /**
  * For each evaluating consumer, decide in two stages:
- *   1. Will it buy at all? Purchase probability is a logistic on how far the
- *      best available product's appeal exceeds the consumer's (diffusion)
- *      threshold. Early on, only low-threshold innovators clear the bar.
+ *   1. Will it buy at all? A Bass-diffusion hazard `p + q·(local adoption)`,
+ *      gated by whether the best available product is "good enough" for the
+ *      consumer's Rogers threshold:
+ *        p — innovation/awareness: a baseline trickle plus a marketing term that
+ *            scales with how aware the consumer is of the best brand.
+ *        q — imitation/social: scales with the fraction of the consumer's
+ *            neighbors who have already adopted anything.
+ *      Early on, low awareness and few adopted neighbors keep the hazard small,
+ *      so only low-threshold innovators bite; as marketing and word-of-mouth
+ *      build, the mainstream comes online (the S-curve).
  *   2. If so, which company? A softmax over the competing products' appeals.
  *
  * Caller decides which consumers evaluate (new shoppers, a few switchers, and
@@ -108,21 +116,33 @@ export function rollAdoptions(
     const c = consumers[idx]!;
 
     const womCounts: Record<CompanyId, number> = {};
+    let adoptedNeighbors = 0;
     for (const nIdx of neighbors.neighborsOf(idx)) {
       const nb = consumers[nIdx];
       if (nb?.adopted) {
         womCounts[nb.adopted] = (womCounts[nb.adopted] ?? 0) + 1;
+        adoptedNeighbors++;
       }
     }
 
     const utils = utilitiesFor(c, companies, womCounts, womK);
     const appeals = utils.map((u) => u.utility);
-    const best = appeals.length ? Math.max(...appeals) : 0;
+    let bestIdx = 0;
+    for (let i = 1; i < appeals.length; i++) {
+      if ((appeals[i] ?? -Infinity) > (appeals[bestIdx] ?? -Infinity)) bestIdx = i;
+    }
+    const best = appeals.length ? (appeals[bestIdx] ?? 0) : 0;
+    const bestId = utils[bestIdx]?.companyId;
 
-    // Stage 1: diffusion gate.
-    const buyProb = logistic(
+    // Stage 1: Bass diffusion gate. The fit gate keeps the "is it good enough
+    // yet" dynamic; the Bass hazard (p + q) sets how fast that demand converts.
+    const fitGate = logistic(
       DEFAULTS.purchaseLogisticK * (best - c.adoptionThreshold),
     );
+    const awareOfBest = bestId != null ? (c.awareness[bestId] ?? 0) : 0;
+    const p = BASS.pBase + BASS.pAwareness * awareOfBest;
+    const q = BASS.qSocial * (adoptedNeighbors / Math.max(1, womK));
+    const buyProb = Math.max(0, Math.min(1, fitGate * (p + q)));
     if (rng.next() > buyProb) {
       out.push({ consumerIdx: idx, pickedCompanyId: null });
       continue;

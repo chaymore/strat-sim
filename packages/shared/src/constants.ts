@@ -34,10 +34,27 @@ export const ADOPTION_WEIGHTS = {
   awareness: 0.7,
 } as const;
 
+/**
+ * Bass "diffusion of innovation" coefficients. Each evaluating consumer's
+ * per-turn hazard of buying is `p + q·(neighbors who already adopted)`, gated by
+ * whether the best product is "good enough" for its Rogers threshold.
+ *   p — innovation/awareness coefficient. A small autonomous trickle (pBase)
+ *       plus a marketing-driven term (pAwareness × awareness of the best brand).
+ *       High p ⇒ fast initial adoption (a well-marketed launch).
+ *   q — imitation/social coefficient. Scales with the fraction of a consumer's
+ *       neighbors who have already adopted anything. High q with low p ⇒ a slow,
+ *       viral S-curve that builds momentum through social proof.
+ */
+export const BASS = {
+  pBase: 0.04, // autonomous awareness even with no marketing
+  pAwareness: 0.55, // how strongly marketing-built awareness raises p
+  qSocial: 0.75, // word-of-mouth imitation strength
+} as const;
+
 export const MARKET_CAP_MULT = {
   ebitda: 6, // reward real per-turn profitability more
   recurringAnnual: 6,
-  customerLtv: 70_000, // installed-base value; lower so grabbing cheap customers isn't an auto-win
+  customerLtv: 35_000, // installed-base value; lower so grabbing cheap customers isn't an auto-win
   brandFloor: 50,
   rdPipeline: 40_000,
   growthCap: 8_000_000,
@@ -72,6 +89,18 @@ export interface SegmentDef {
   priceRange: readonly [number, number];
   blurb: string;
 }
+
+/**
+ * Fixed company HQ corners in world coordinates, assigned to companies by their
+ * order in the match lineup. The town renders each company's "box" here, and
+ * consumers who adopt a company drift toward its box (see driftConsumers).
+ */
+export const HQ_CORNERS: readonly { x: number; y: number }[] = [
+  { x: 4, y: 4 },
+  { x: 35, y: 4 },
+  { x: 4, y: 35 },
+  { x: 35, y: 35 },
+] as const;
 
 /** Four latent customer segments, each clustered around one feature axis. */
 export const SEGMENTS: readonly SegmentDef[] = [

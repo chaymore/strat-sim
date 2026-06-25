@@ -29,12 +29,17 @@ describe("resolveTurn", () => {
         { id: "b", name: "B" },
       ],
     });
-    submitDecision(game, fixedDecision("a"));
-    submitDecision(game, fixedDecision("b"));
-    const { perCompany } = resolveTurn(game);
-    expect(game.turn).toBe(1);
-    expect(perCompany.a?.unitsSold).toBeGreaterThan(0);
-    expect(perCompany.b?.unitsSold).toBeGreaterThan(0);
+    // Bass diffusion starts slowly — turn 1 has near-zero awareness and no
+    // word-of-mouth yet — so resolve a few turns to let adoption get going,
+    // then assert both competitors have won customers.
+    for (let i = 0; i < 3; i++) {
+      submitDecision(game, fixedDecision("a"));
+      submitDecision(game, fixedDecision("b"));
+      resolveTurn(game);
+    }
+    expect(game.turn).toBe(3);
+    expect(game.companies.a?.customers).toBeGreaterThan(0);
+    expect(game.companies.b?.customers).toBeGreaterThan(0);
   });
 
   it("respects production capacity", () => {

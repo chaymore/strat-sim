@@ -6,7 +6,7 @@ import {
   Ticker,
   type FederatedPointerEvent,
 } from "pixi.js";
-import { DEFAULTS, type Consumer, type ObservationView } from "@strat-sim/shared";
+import { DEFAULTS, HQ_CORNERS, type Consumer, type ObservationView } from "@strat-sim/shared";
 
 const TILE_W = 28;
 const TILE_H = 14;
@@ -240,12 +240,7 @@ function drawGround(): Container {
   return layer;
 }
 
-const HQ_POSITIONS: Array<{ x: number; y: number }> = [
-  { x: 4, y: 4 },
-  { x: 35, y: 4 },
-  { x: 4, y: 35 },
-  { x: 35, y: 35 },
-];
+const HQ_POSITIONS = HQ_CORNERS;
 const HQ_IDS = ["you", "low", "prem", "niche"];
 
 function drawHQs(): Container {

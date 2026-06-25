@@ -21,6 +21,8 @@ export interface Company {
   id: CompanyId;
   name: string;
   archetype: "neutral" | "lowcost" | "premium" | "niche";
+  /** Fixed HQ "box" position in world coords; consumers drift toward it when they adopt. */
+  hqPosition: Position;
   cash: number;
   capacity: number;
   rdPoints: number;

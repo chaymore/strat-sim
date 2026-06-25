@@ -359,30 +359,17 @@ export function resolveTurn(state: GameState): ResolveResult {
 
 function driftConsumers(state: GameState, rng: Rng): void {
   const { width, height } = DEFAULTS.worldSize;
-  const centroids: Record<CompanyId, { x: number; y: number; n: number }> = {};
-  for (const c of state.consumers) {
-    if (!c.adopted) continue;
-    const cur = centroids[c.adopted] ?? { x: 0, y: 0, n: 0 };
-    cur.x += c.position.x;
-    cur.y += c.position.y;
-    cur.n += 1;
-    centroids[c.adopted] = cur;
-  }
-  for (const id of Object.keys(centroids)) {
-    const cen = centroids[id]!;
-    cen.x /= cen.n;
-    cen.y /= cen.n;
-  }
   const JITTER = 0.35;
   const PULL = 0.06;
   for (const c of state.consumers) {
     let dx = (rng.next() - 0.5) * JITTER * 2;
     let dy = (rng.next() - 0.5) * JITTER * 2;
     if (c.adopted) {
-      const cen = centroids[c.adopted];
-      if (cen) {
-        dx += (cen.x - c.position.x) * PULL;
-        dy += (cen.y - c.position.y) * PULL;
+      // Adopters gravitate toward the box of the company they bought from.
+      const hq = state.companies[c.adopted]?.hqPosition;
+      if (hq) {
+        dx += (hq.x - c.position.x) * PULL;
+        dy += (hq.y - c.position.y) * PULL;
       }
     }
     c.position = {

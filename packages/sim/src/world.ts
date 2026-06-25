@@ -1,6 +1,7 @@
 import {
   ADOPTER_CATEGORIES,
   DEFAULTS,
+  HQ_CORNERS,
   NUM_AXES,
   SEGMENTS,
   type CompanyId,
@@ -9,6 +10,7 @@ import {
   type FeatureVector,
   type GameState,
   type MatchConfig,
+  type Position,
 } from "@strat-sim/shared";
 import { Rng } from "./rng.js";
 
@@ -82,11 +84,13 @@ export function createConsumers(rng: Rng, n: number): Consumer[] {
   return out;
 }
 
-export function createCompany(id: CompanyId, name: string): Company {
+export function createCompany(id: CompanyId, name: string, hqPosition?: Position): Company {
+  const { width, height } = DEFAULTS.worldSize;
   return {
     id,
     name,
     archetype: "neutral",
+    hqPosition: hqPosition ?? { x: width / 2, y: height / 2 },
     cash: DEFAULTS.startingCash,
     capacity: DEFAULTS.startingCapacity,
     rdPoints: 0,
@@ -106,9 +110,10 @@ export function createGame(config: MatchConfig): GameState {
   const rng = new Rng(config.seed);
   const consumers = createConsumers(rng, config.numConsumers);
   const companies: Record<CompanyId, Company> = {};
-  for (const c of config.companies) {
-    companies[c.id] = createCompany(c.id, c.name);
-  }
+  config.companies.forEach((c, i) => {
+    const corner = HQ_CORNERS[i % HQ_CORNERS.length]!;
+    companies[c.id] = createCompany(c.id, c.name, { ...corner });
+  });
   return {
     config,
     turn: 0,

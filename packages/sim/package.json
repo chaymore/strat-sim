@@ -14,7 +14,8 @@
     "build": "tsc -p tsconfig.build.json",
     "test": "vitest run",
     "test:watch": "vitest",
-    "demo": "tsx src/cli/demo.ts"
+    "demo": "tsx src/cli/demo.ts",
+    "calibrate": "tsx src/cli/calibrate.ts"
   },
   "dependencies": {
     "@strat-sim/shared": "workspace:*"
