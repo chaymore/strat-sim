@@ -16,34 +16,33 @@ export function ConsumerTooltip({
 
   return (
     <div style={boxStyle} onClick={(e) => e.stopPropagation()}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
-        <strong style={{ fontSize: 13 }}>Consumer {consumer.id}</strong>
+      <div style={headerStyle}>
+        <strong style={{ fontSize: 13, fontWeight: 800, letterSpacing: 0.3 }}>CONSUMER {consumer.id}</strong>
         <button onClick={onClose} style={closeBtn}>×</button>
       </div>
-      <div style={{ opacity: 0.7, fontSize: 12, marginBottom: 8 }}>
-        Owns:{" "}
-        <span style={{ color: `#${adoptedColor.toString(16).padStart(6, "0")}` }}>
-          {adoptedName}
-        </span>
-      </div>
-      <div style={{ fontSize: 12, marginBottom: 4, opacity: 0.7 }}>Preferences</div>
-      {FEATURE_AXES.map((axis, i) => (
-        <div key={axis} style={{ display: "grid", gridTemplateColumns: "70px 1fr 36px", gap: 6, alignItems: "center", marginBottom: 3 }}>
-          <span style={{ fontSize: 12, opacity: 0.8 }}>{axis}</span>
-          <div style={{ background: "#26262f", height: 6, borderRadius: 3, overflow: "hidden" }}>
-            <div style={{
-              background: "#4cc2ff",
-              height: "100%",
-              width: `${(consumer.prefs[i] ?? 0) * 100}%`,
-            }} />
-          </div>
-          <span style={{ fontSize: 11, opacity: 0.7, textAlign: "right" }}>
-            {((consumer.prefs[i] ?? 0) * 100).toFixed(0)}%
-          </span>
+      <div style={{ padding: "11px 14px" }}>
+        <div style={rowStyle}>
+          <span style={{ color: "#5A6B82", fontWeight: 600 }}>Owns</span>
+          <span style={{ fontWeight: 800, color: `#${adoptedColor.toString(16).padStart(6, "0")}` }}>{adoptedName}</span>
         </div>
-      ))}
-      <div style={{ marginTop: 8, fontSize: 12, opacity: 0.7 }}>
-        Price ceiling: <strong style={{ color: "#f5f5f7" }}>${Math.round(consumer.priceCeiling)}</strong>
+        <div style={{ fontSize: 9.5, letterSpacing: 1, fontWeight: 800, textTransform: "uppercase", color: "#5A6B82", margin: "10px 0 6px" }}>
+          Preferences
+        </div>
+        {FEATURE_AXES.map((axis, i) => (
+          <div key={axis} style={{ display: "grid", gridTemplateColumns: "72px 1fr 36px", gap: 7, alignItems: "center", marginBottom: 5 }}>
+            <span style={{ fontSize: 12, fontWeight: 600, color: "#5A6B82", textTransform: "capitalize" }}>{axis}</span>
+            <div style={{ background: "#EAF0F7", height: 6, overflow: "hidden" }}>
+              <div style={{ background: "#1466B8", height: "100%", width: `${(consumer.prefs[i] ?? 0) * 100}%` }} />
+            </div>
+            <span style={{ fontSize: 11, fontWeight: 700, color: "#0B2545", textAlign: "right" }}>
+              {((consumer.prefs[i] ?? 0) * 100).toFixed(0)}%
+            </span>
+          </div>
+        ))}
+        <div style={{ ...rowStyle, marginTop: 10, borderTop: "1px solid #EAF0F7", paddingTop: 9 }}>
+          <span style={{ color: "#5A6B82", fontWeight: 600 }}>Price ceiling</span>
+          <strong style={{ color: "#0B2545", fontWeight: 800 }}>${Math.round(consumer.priceCeiling)}</strong>
+        </div>
       </div>
     </div>
   );
@@ -51,22 +50,28 @@ export function ConsumerTooltip({
 
 const boxStyle: React.CSSProperties = {
   position: "absolute",
-  top: 16,
-  right: 16,
+  top: 18,
+  right: 18,
   width: 240,
-  background: "#1c1c24",
-  border: "1px solid #2c2c38",
-  borderRadius: 8,
-  padding: 12,
-  boxShadow: "0 8px 24px rgba(0,0,0,0.4)",
-  color: "#f5f5f7",
+  background: "#fff",
+  border: "1.5px solid #0B2545",
   zIndex: 5,
+  fontFamily: "'Archivo', system-ui, sans-serif",
+};
+
+const headerStyle: React.CSSProperties = {
+  display: "flex", justifyContent: "space-between", alignItems: "center",
+  background: "#0B2545", color: "#fff", padding: "10px 14px",
+};
+
+const rowStyle: React.CSSProperties = {
+  display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 12.5,
 };
 
 const closeBtn: React.CSSProperties = {
   background: "transparent",
   border: "none",
-  color: "#bbbbcc",
+  color: "#9DB6D6",
   fontSize: 18,
   cursor: "pointer",
   padding: 0,

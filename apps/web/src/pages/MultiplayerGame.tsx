@@ -1,9 +1,9 @@
-import { DecisionPanel } from "../DecisionPanel.js";
 import { GameView } from "../GameView.js";
 import { useSession } from "../session.js";
 import { useMatchSocket } from "../useMatchSocket.js";
 import { Page, Card } from "../ui.js";
 import { navigate } from "../router.js";
+import { M } from "../theme.js";
 import type { TurnDecision } from "@strat-sim/shared";
 
 export function MultiplayerGame({ matchId }: { matchId: string }) {
@@ -39,18 +39,16 @@ export function MultiplayerGame({ matchId }: { matchId: string }) {
   };
 
   return (
-    <div style={{ display: "flex", height: "100%" }}>
-      <DecisionPanel observation={observation} onSubmit={submit} onNewMatch={exit} />
-      <GameView
-        observation={observation}
-        onPlayAgain={exit}
-        overlay={
-          !ended && awaitingCompanyIds.length > 0 ? (
-            <WaitingOverlay youSubmitted={youSubmitted} waiting={awaitingCompanyIds.length} />
-          ) : null
-        }
-      />
-    </div>
+    <GameView
+      observation={observation}
+      onSubmit={submit}
+      onNewMatch={exit}
+      overlay={
+        !ended && awaitingCompanyIds.length > 0 ? (
+          <WaitingOverlay youSubmitted={youSubmitted} waiting={awaitingCompanyIds.length} />
+        ) : null
+      }
+    />
   );
 }
 
@@ -59,16 +57,18 @@ function WaitingOverlay({ youSubmitted, waiting }: { youSubmitted: boolean; wait
   return (
     <div style={{
       position: "absolute",
-      top: 56,
-      right: 12,
-      background: "rgba(28,28,36,0.92)",
-      border: "1px solid #2c2c38",
-      borderRadius: 6,
-      padding: "8px 12px",
-      fontSize: 13,
-      color: "#9aff9a",
+      top: 18,
+      right: 18,
+      background: M.navy,
+      border: `1px solid ${M.navy3}`,
+      padding: "9px 14px",
+      fontSize: 12.5,
+      fontWeight: 700,
+      letterSpacing: 0.3,
+      color: M.amber,
+      zIndex: 6,
     }}>
-      Turn submitted — waiting on {waiting} player{waiting === 1 ? "" : "s"}…
+      ORDERS SUBMITTED — waiting on {waiting} player{waiting === 1 ? "" : "s"}…
     </div>
   );
 }

@@ -1,67 +1,59 @@
 import { FEATURE_AXES, type ObservationView } from "@strat-sim/shared";
 import { Meter } from "../Meter.js";
+import { M } from "../theme.js";
+import { PageHeader } from "./FinanceTab.js";
 
 const AXIS_COLOR: Record<string, string> = {
-  privacy: "#4cc2ff",
-  capability: "#ffb84c",
-  design: "#ff5fa2",
-  wellness: "#8aff7a",
+  privacy: "#1466B8",
+  capability: "#E8A33D",
+  design: "#B5476B",
+  wellness: "#2E8C73",
 };
 
 export function SegmentsTab({ observation }: { observation: ObservationView }) {
   return (
-    <div>
-      <p style={{ marginTop: 0, opacity: 0.75, fontSize: 13 }}>
-        The town holds <strong>{observation.totalMarket}</strong> potential customers in four
-        segments. Each segment cares about different features and has its own willingness to pay.
-        Match your product to a segment's preferences — and get it good enough to clear their bar —
-        to win them over. So far <strong>{observation.totalAdopted}</strong> shoppers have bought
-        anything at all.
+    <div style={{ fontFamily: M.font }}>
+      <PageHeader title="Customer Segments" sub={`${observation.totalMarket} potential customers · ${observation.totalAdopted} have adopted so far`} />
+      <p style={{ marginTop: -8, color: M.muted, fontSize: 13.5, fontWeight: 500, lineHeight: 1.6, marginBottom: 22, maxWidth: 760 }}>
+        The town holds four segments that each value different features and carry their own
+        willingness to pay. Match your product to a segment's preferences — and get it good enough to
+        clear their bar — to win them over.
       </p>
 
-      <div style={{ display: "grid", gap: 12 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
         {observation.segments.map((seg) => {
           const adoptionPct = seg.size > 0 ? (seg.adopted / seg.size) * 100 : 0;
-          const color = AXIS_COLOR[seg.key] ?? "#4cc2ff";
+          const color = AXIS_COLOR[seg.key] ?? M.blue;
           return (
             <div key={seg.key} style={cardStyle}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
-                <strong style={{ fontSize: 14, color }}>{seg.name}</strong>
-                <span style={{ fontSize: 12, opacity: 0.7 }}>{seg.size} people</span>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
+                <span style={{ width: 12, height: 12, background: color, flexShrink: 0 }} />
+                <strong style={{ fontSize: 16, fontWeight: 800 }}>{seg.name}</strong>
+                <span style={{ marginLeft: "auto", fontSize: 12, fontWeight: 700, color: M.muted2 }}>{seg.size} people</span>
               </div>
-              <p style={{ margin: "4px 0 10px", fontSize: 12, opacity: 0.7 }}>{seg.blurb}</p>
+              <p style={{ margin: "0 0 14px", fontSize: 12.5, color: M.muted, fontWeight: 500, lineHeight: 1.5 }}>{seg.blurb}</p>
 
-              <div style={{ fontSize: 11, textTransform: "uppercase", opacity: 0.55, marginBottom: 4 }}>
-                What they value
-              </div>
-              {FEATURE_AXES.map((axis, i) => (
-                <Meter
-                  key={axis}
-                  label={axis}
-                  value={seg.prefs[i] ?? 0}
-                  max={Math.max(...seg.prefs)}
-                  color={AXIS_COLOR[axis] ?? "#4cc2ff"}
-                  suffix={`${((seg.prefs[i] ?? 0) * 100).toFixed(0)}%`}
-                />
-              ))}
-
-              <div style={{ display: "flex", justifyContent: "space-between", marginTop: 8, fontSize: 12 }}>
-                <span style={{ opacity: 0.7 }}>
-                  Will pay up to <strong style={{ color: "#f5f5f7" }}>${Math.round(seg.medianPriceCeiling)}</strong>
-                  <span style={{ opacity: 0.6 }}> (typical)</span>
-                </span>
-                <span style={{ opacity: 0.7 }}>${seg.priceRange[0]}–${seg.priceRange[1]} range</span>
-              </div>
-
+              <div style={microLabel}>What they value</div>
               <div style={{ marginTop: 8 }}>
-                <Meter
-                  label="adopted"
-                  value={adoptionPct}
-                  max={100}
-                  color={color}
-                  suffix={`${adoptionPct.toFixed(0)}%`}
-                />
+                {FEATURE_AXES.map((axis, i) => (
+                  <Meter
+                    key={axis}
+                    label={axis}
+                    value={seg.prefs[i] ?? 0}
+                    max={Math.max(...seg.prefs)}
+                    color={AXIS_COLOR[axis] ?? M.blue}
+                    suffix={`${((seg.prefs[i] ?? 0) * 100).toFixed(0)}%`}
+                  />
+                ))}
               </div>
+
+              <div style={{ display: "flex", justifyContent: "space-between", margin: "12px 0 10px", fontSize: 12.5, fontWeight: 600, color: M.muted }}>
+                <span>Will pay up to <strong style={{ color: M.text }}>${Math.round(seg.medianPriceCeiling)}</strong></span>
+                <span>${seg.priceRange[0]}–${seg.priceRange[1]} range</span>
+              </div>
+
+              <div style={{ ...microLabel, marginBottom: 6 }}>Adopted</div>
+              <Meter label="" value={adoptionPct} max={100} color={color} suffix={`${adoptionPct.toFixed(0)}%`} />
             </div>
           );
         })}
@@ -70,9 +62,11 @@ export function SegmentsTab({ observation }: { observation: ObservationView }) {
   );
 }
 
+const microLabel: React.CSSProperties = {
+  fontSize: 10, letterSpacing: 1, fontWeight: 800, textTransform: "uppercase", color: M.muted,
+};
 const cardStyle: React.CSSProperties = {
-  background: "#1c1c24",
-  border: "1px solid #2c2c38",
-  borderRadius: 8,
-  padding: 14,
+  background: "#fff",
+  border: `1.5px solid ${M.line}`,
+  padding: 18,
 };
