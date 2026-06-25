@@ -1,13 +1,14 @@
 import type { CSSProperties, ReactNode } from "react";
+import { M } from "./theme.js";
 
 export const colors = {
-  bg: "#1a1a22",
-  card: "#1c1c24",
-  border: "#2c2c38",
-  text: "#f5f5f7",
-  textDim: "#9aa",
-  primary: "#4cc2ff",
-  danger: "#ff7878",
+  bg: "#ffffff",
+  card: "#ffffff",
+  border: M.line,
+  text: M.text,
+  textDim: M.muted,
+  primary: M.blue,
+  danger: M.danger,
 } as const;
 
 export function Page({ children }: { children: ReactNode }) {
@@ -29,15 +30,16 @@ export function Card({ children, title, subtitle }: { children: ReactNode; title
   return (
     <div style={{
       background: colors.card,
-      border: `1px solid ${colors.border}`,
-      borderRadius: 12,
-      padding: 24,
-      width: 420,
+      border: `1.5px solid ${colors.border}`,
+      padding: 28,
+      width: 440,
       maxWidth: "100%",
-      boxShadow: "0 10px 40px rgba(0,0,0,0.4)",
+      boxShadow: "0 16px 50px rgba(11,37,69,0.12)",
+      borderTop: `4px solid ${M.navy}`,
+      fontFamily: M.font,
     }}>
-      {title && <h1 style={{ margin: "0 0 4px", fontSize: 22 }}>{title}</h1>}
-      {subtitle && <p style={{ margin: "0 0 18px", color: colors.textDim, fontSize: 13 }}>{subtitle}</p>}
+      {title && <h1 style={{ margin: "0 0 4px", fontSize: 24, fontWeight: 800, letterSpacing: -0.4 }}>{title}</h1>}
+      {subtitle && <p style={{ margin: "0 0 20px", color: colors.textDim, fontSize: 13.5, fontWeight: 500, lineHeight: 1.5 }}>{subtitle}</p>}
       {children}
     </div>
   );
@@ -51,20 +53,21 @@ export function Button({ children, onClick, variant = "primary", disabled, style
   style?: CSSProperties;
 }) {
   const base: CSSProperties = {
-    padding: "10px 14px",
-    borderRadius: 6,
+    padding: "12px 16px",
     fontSize: 14,
-    fontWeight: 600,
+    fontWeight: 800,
+    letterSpacing: 0.4,
     cursor: disabled ? "not-allowed" : "pointer",
     border: "none",
     width: "100%",
     transition: "background 0.15s",
     opacity: disabled ? 0.5 : 1,
+    fontFamily: M.font,
   };
   const variants: Record<string, CSSProperties> = {
-    primary: { background: colors.primary, color: "#0a1018" },
-    secondary: { background: "#2c2c38", color: colors.text },
-    ghost: { background: "transparent", color: colors.textDim, border: `1px solid ${colors.border}` },
+    primary: { background: colors.primary, color: "#fff" },
+    secondary: { background: M.navy, color: "#fff" },
+    ghost: { background: "transparent", color: M.muted, border: `1.5px solid ${colors.border}` },
   };
   return (
     <button onClick={onClick} disabled={disabled} style={{ ...base, ...variants[variant], ...style }}>
@@ -89,14 +92,14 @@ export function Input({ label, value, onChange, placeholder, autoUpper }: {
         onChange={(e) => onChange(autoUpper ? e.target.value.toUpperCase() : e.target.value)}
         style={{
           width: "100%",
-          padding: "8px 10px",
-          background: "#16161e",
+          padding: "10px 12px",
+          background: M.surfaceSlate,
           color: colors.text,
-          border: `1px solid ${colors.border}`,
-          borderRadius: 4,
+          border: `1.5px solid ${colors.border}`,
           fontSize: 14,
-          fontFamily: autoUpper ? "ui-monospace, SFMono-Regular, monospace" : undefined,
-          letterSpacing: autoUpper ? 1 : undefined,
+          fontWeight: autoUpper ? 800 : 600,
+          fontFamily: M.font,
+          letterSpacing: autoUpper ? 3 : undefined,
           boxSizing: "border-box",
         }}
       />
@@ -108,13 +111,13 @@ export function ErrorBanner({ message }: { message: string | null }) {
   if (!message) return null;
   return (
     <div style={{
-      background: "rgba(255,120,120,0.12)",
-      border: `1px solid ${colors.danger}`,
+      background: M.dangerBg,
+      border: `1.5px solid ${colors.danger}`,
       color: colors.danger,
-      padding: "8px 10px",
-      borderRadius: 4,
+      padding: "9px 11px",
       marginBottom: 12,
       fontSize: 13,
+      fontWeight: 600,
     }}>{message}</div>
   );
 }

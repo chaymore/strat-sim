@@ -1,8 +1,12 @@
 import { useState } from "react";
 import type { FeatureAxis, ObservationView, TurnDecision } from "@strat-sim/shared";
-import { HistoryChart } from "./HistoryChart.js";
+import { M } from "./theme.js";
+import { Icon, type IconName } from "./icons.js";
 
 const SEGMENTS: (FeatureAxis | "broad")[] = ["broad", "privacy", "capability", "design", "wellness"];
+const SEG_SHORT: Record<string, string> = {
+  broad: "Broad", privacy: "Privacy", capability: "Capability", design: "Design", wellness: "Wellness",
+};
 
 const CONCEPT_HINTS: Record<string, string> = {
   pricing:
@@ -15,8 +19,6 @@ const CONCEPT_HINTS: Record<string, string> = {
     "Production capacity caps how many new customers you can serve per turn. If demand exceeds capacity, units are allocated randomly — so under-investing in capacity throws away market share.",
   subscription:
     "Recurring revenue is valued ~8× annual at exit. A high-margin one-time sale earns you cash now; a subscription compounds — but consumers won't subscribe if it's priced too aggressively.",
-  archetype:
-    "Archetypes (low-cost, premium, niche) describe your current product+price strategy. Pivoting between them mid-game is allowed but costly — like real positioning shifts.",
 };
 
 export function DecisionPanel({
@@ -42,279 +44,272 @@ export function DecisionPanel({
   const overBudget = totalSpend > observation.you.cash;
 
   const ended = observation.phase === "ended";
+  const turnsLeft = Math.max(0, observation.maxTurns - observation.turn);
 
   return (
     <aside style={panelStyle}>
+      {/* navy header */}
       <header style={headerStyle}>
-        <h2 style={{ margin: 0 }}>Turn {observation.turn} / {observation.maxTurns}</h2>
-        <button onClick={onNewMatch} style={btnSecondary}>New match</button>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <h2 style={{ margin: 0, fontSize: 18, fontWeight: 800, letterSpacing: 0.2, color: "#fff" }}>
+            TURN {observation.turn} ORDERS
+          </h2>
+          <span style={turnChip}>{turnsLeft} LEFT</span>
+        </div>
+        <p style={{ margin: "8px 0 0", color: M.onNavyMuted, fontSize: 12, lineHeight: 1.5 }}>
+          Set price, product and growth. All firms commit simultaneously.
+        </p>
+        <button onClick={onNewMatch} style={exitBtn}>
+          {ended ? "New match" : "Resign / new match"}
+        </button>
       </header>
 
-      <Section title="Your company">
-        <Row label="Cash" value={`$${fmt(observation.you.cash)}`} />
-        <Row label="Capacity" value={String(observation.you.capacity)} />
-        <Row label="Customers" value={String(observation.you.customers)} />
-        <Row label="Brand" value={observation.you.brandReputation.toFixed(1)} />
-        <Row label="Market cap" value={`$${fmt(observation.you.marketCap)}`} />
-        <Row
-          label="Archetype"
-          value={observation.you.archetype}
-          hint={CONCEPT_HINTS.archetype}
-        />
-        <div style={{ marginTop: 8 }}>
-          <HistoryChart observation={observation} metric="marketCap" />
-        </div>
-      </Section>
-
-      <Section title="Competitors">
-        {observation.competitors.map((c) => (
-          <div key={c.id} style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 4 }}>
-            <strong>{c.name}</strong>
-            <span>{(c.marketShare * 100).toFixed(1)}% · ${fmt(c.product.price)} · cap ${fmt(c.marketCap)}</span>
+      <div style={bodyStyle}>
+        {ended ? (
+          <div style={{ color: M.muted, fontSize: 13, padding: "20px 0", textAlign: "center" }}>
+            This match has ended. Review the standings, then start a new match.
           </div>
-        ))}
-      </Section>
+        ) : (
+          <>
+            <SectionLabel icon="tag" text="Pricing" hint={CONCEPT_HINTS.pricing} />
+            <Field icon="tag" label="Hardware price" value={price} onChange={setPrice} step={10} prefix="$"
+              bar={clamp(price / 800)} note="Wider reach at lower prices; fatter margin higher up." />
+            <Field icon="coins" label="Subscription" value={subPrice} onChange={setSubPrice} step={5} suffix="/mo" prefix="$"
+              bar={clamp(subPrice / 40)} note="Recurring revenue — valued ~8× at exit." hint={CONCEPT_HINTS.subscription} />
 
-      {!ended && (
-        <>
-          <Section title="Pricing" hint={CONCEPT_HINTS.pricing}>
-            <NumInput label="Price ($)" value={price} onChange={setPrice} step={10} />
-            <NumInput
-              label="Subscription ($/mo)"
-              value={subPrice}
-              onChange={setSubPrice}
-              step={5}
-              hint={CONCEPT_HINTS.subscription}
-            />
-          </Section>
+            <SectionLabel icon="bolt" text="Growth" hint={CONCEPT_HINTS.rd} />
+            <div style={fieldBox}>
+              <div style={fieldHead}>
+                <span style={fieldIcon}><Icon name="beaker" size={15} /></span>
+                <span style={fieldLabel}>R&amp;D budget</span>
+                <span style={fieldValue}>${fmt(rdCost)}</span>
+              </div>
+              <div style={{ height: 6, background: M.lineHair, margin: "9px 0 10px", position: "relative" }}>
+                <div style={{ position: "absolute", inset: 0, width: `${clamp(totalRd / 60) * 100}%`, background: M.blue }} />
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                {(["privacy", "capability", "design", "wellness"] as const).map((axis) => (
+                  <Stepper key={axis} label={axis} value={rd[axis]} onChange={(v) => setRd({ ...rd, [axis]: Math.max(0, v) })} />
+                ))}
+              </div>
+            </div>
 
-          <Section title={`R&D (${totalRd} pts × $10k = $${fmt(rdCost)})`} hint={CONCEPT_HINTS.rd}>
-            {(["privacy", "capability", "design", "wellness"] as const).map((axis) => (
-              <NumInput
-                key={axis}
-                label={axis}
-                value={rd[axis]}
-                onChange={(v) => setRd({ ...rd, [axis]: Math.max(0, v) })}
-                step={1}
-              />
-            ))}
-          </Section>
+            <Field icon="mega" label="Marketing" value={marketing} onChange={setMarketing} step={5_000} prefix="$"
+              bar={clamp(marketing / 200_000)} note={`Targeting the ${SEG_SHORT[segment]} segment.`} hint={CONCEPT_HINTS.marketing} />
 
-          <Section title={`Marketing ($${fmt(marketing)})`} hint={CONCEPT_HINTS.marketing}>
-            <NumInput label="Spend ($)" value={marketing} onChange={setMarketing} step={5_000} />
-            <label style={{ display: "flex", justifyContent: "space-between" }}>
-              Target segment
-              <select value={segment} onChange={(e) => setSegment(e.target.value as FeatureAxis | "broad")}>
-                {SEGMENTS.map((s) => <option key={s} value={s}>{s}</option>)}
-              </select>
-            </label>
-          </Section>
+            <div style={{ margin: "0 0 16px" }}>
+              <div style={{ ...microLabelStyle, marginBottom: 8 }}>Target segment</div>
+              <div style={segWrap}>
+                {SEGMENTS.map((s) => (
+                  <button key={s} onClick={() => setSegment(s)} style={s === segment ? segOn : segOff}>
+                    {SEG_SHORT[s]}
+                  </button>
+                ))}
+              </div>
+            </div>
 
-          <Section title={`Capacity (+${capacity} units, $${fmt(capCost)})`} hint={CONCEPT_HINTS.capacity}>
-            <Row label="Current /turn" value={String(observation.you.capacity)} />
-            <CapacityNote observation={observation} />
-            <NumInput label="Add capacity" value={capacity} onChange={setCapacity} step={5} />
-          </Section>
+            <Field icon="factory" label="Add capacity" value={capacity} onChange={setCapacity} step={5} suffix=" units"
+              bar={clamp(capacity / 80)} note={capacityNote(observation)} hint={CONCEPT_HINTS.capacity} />
 
-          <div style={{ marginTop: 12, color: overBudget ? "#ff7878" : "#9aff9a" }}>
-            Total spend: ${fmt(totalSpend)} {overBudget && "(over budget — will be scaled down)"}
-          </div>
+            <div style={totalRow}>
+              <span style={microLabelStyle}>Committed this turn</span>
+              <span style={{ fontSize: 20, fontWeight: 800, color: overBudget ? M.danger : M.text }}>
+                ${fmt(totalSpend)}
+              </span>
+            </div>
+            {overBudget && (
+              <div style={{ fontSize: 11.5, color: M.danger, margin: "-6px 0 10px", fontWeight: 600 }}>
+                Over your ${fmt(observation.you.cash)} cash — spend will be scaled down.
+              </div>
+            )}
 
-          <button
-            style={btnPrimary}
-            onClick={() =>
-              onSubmit({
-                companyId: observation.you.id,
-                price,
-                subscriptionPrice: subPrice,
-                rd,
-                marketing: { total: marketing, segmentTarget: segment },
-                capacityInvestment: capacity,
-              })
-            }
-          >
-            Submit turn
-          </button>
-        </>
-      )}
+            <button
+              style={submitBtn}
+              onClick={() =>
+                onSubmit({
+                  companyId: observation.you.id,
+                  price,
+                  subscriptionPrice: subPrice,
+                  rd,
+                  marketing: { total: marketing, segmentTarget: segment },
+                  capacityInvestment: capacity,
+                })
+              }
+            >
+              <Icon name="arrow" size={18} stroke={2.2} /> COMMIT ORDERS
+            </button>
+          </>
+        )}
 
-      <Section title="Log">
-        <ul style={{ paddingLeft: 16, margin: 0, fontSize: 12, opacity: 0.8 }}>
-          {observation.log.slice(-8).map((l, i) => <li key={i}>{l}</li>)}
+        <SectionLabel icon="info" text="Activity log" />
+        <ul style={logStyle}>
+          {observation.log.slice(-7).map((l, i) => <li key={i} style={{ marginBottom: 3 }}>{l}</li>)}
+          {observation.log.length === 0 && <li style={{ opacity: 0.6 }}>No events yet.</li>}
         </ul>
-      </Section>
+      </div>
     </aside>
   );
 }
 
-function CapacityNote({ observation }: { observation: ObservationView }) {
+function capacityNote(observation: ObservationView): string {
   const last = observation.you.history.at(-1);
-  if (!last) return null;
+  if (!last) return `Starting capacity ${observation.you.capacity} units/turn.`;
   const lost = Math.max(0, last.demand - last.unitsSold);
-  return (
-    <div style={{ fontSize: 11, opacity: 0.8, color: lost > 0 ? "#ff9e6d" : "#9aff9a" }}>
-      Last turn: shipped {last.unitsSold} of {last.demand} demand
-      {lost > 0 ? ` — ${lost} lost to capacity` : " — all demand met"}
-    </div>
-  );
+  return lost > 0
+    ? `Last turn ${lost} buyers lost to capacity — consider more.`
+    : `Last turn met all ${last.demand} demand.`;
 }
 
-function Section({ title, children, hint }: { title: string; children: React.ReactNode; hint?: string }) {
-  return (
-    <section style={{ marginBottom: 14 }}>
-      <h3 style={{ fontSize: 13, textTransform: "uppercase", opacity: 0.7, margin: "0 0 6px", display: "flex", alignItems: "center", gap: 6 }}>
-        {title}
-        {hint && <Hint text={hint} />}
-      </h3>
-      <div style={{ display: "grid", gap: 4 }}>{children}</div>
-    </section>
-  );
-}
-
-function Row({ label, value, hint }: { label: string; value: string; hint?: string }) {
-  return (
-    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-      <span style={{ opacity: 0.7, display: "inline-flex", alignItems: "center", gap: 6 }}>
-        {label}
-        {hint && <Hint text={hint} />}
-      </span>
-      <span>{value}</span>
-    </div>
-  );
-}
-
-function NumInput({
-  label,
-  value,
-  onChange,
-  step,
-  hint,
+/* ----------------------------- field widgets ----------------------------- */
+function Field({
+  icon, label, value, onChange, step, prefix = "", suffix = "", bar, note, hint,
 }: {
-  label: string;
-  value: number;
-  onChange: (v: number) => void;
-  step: number;
-  hint?: string;
+  icon: IconName; label: string; value: number; onChange: (v: number) => void;
+  step: number; prefix?: string; suffix?: string; bar: number; note?: string; hint?: string;
 }) {
   return (
-    <label style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "center" }}>
-      <span style={{ opacity: 0.7, display: "inline-flex", alignItems: "center", gap: 6 }}>
-        {label}
-        {hint && <Hint text={hint} />}
+    <div style={fieldBox}>
+      <div style={fieldHead}>
+        <span style={fieldIcon}><Icon name={icon} size={15} /></span>
+        <span style={fieldLabel}>{label}{hint && <Hint text={hint} />}</span>
+        <div style={inputWrap}>
+          {prefix && <span style={affix}>{prefix}</span>}
+          <input
+            type="number"
+            value={value === 0 ? "" : value}
+            placeholder="0"
+            step={step}
+            onChange={(e) => {
+              const raw = e.target.value;
+              if (raw === "") return onChange(0);
+              const n = Number(raw);
+              if (!Number.isNaN(n)) onChange(n);
+            }}
+            style={numInput}
+          />
+          {suffix && <span style={affix}>{suffix}</span>}
+        </div>
+      </div>
+      <div style={{ height: 6, background: M.lineHair, margin: "9px 0 6px", position: "relative" }}>
+        <div style={{ position: "absolute", inset: 0, width: `${bar * 100}%`, background: M.blue }} />
+      </div>
+      {note && <div style={{ fontSize: 11, color: M.muted2, fontWeight: 500 }}>{note}</div>}
+    </div>
+  );
+}
+
+function Stepper({ label, value, onChange }: { label: string; value: number; onChange: (v: number) => void }) {
+  return (
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", border: `1.5px solid ${M.line}`, padding: "5px 6px 5px 9px" }}>
+      <span style={{ fontSize: 11.5, fontWeight: 700, color: M.muted, textTransform: "capitalize" }}>{label}</span>
+      <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
+        <button style={stepBtn} onClick={() => onChange(Math.max(0, value - 1))}>−</button>
+        <span style={{ width: 18, textAlign: "center", fontWeight: 800, fontSize: 13 }}>{value}</span>
+        <button style={stepBtn} onClick={() => onChange(value + 1)}>+</button>
       </span>
-      <input
-        type="number"
-        value={value === 0 ? "" : value}
-        placeholder="0"
-        step={step}
-        onChange={(e) => {
-          const raw = e.target.value;
-          if (raw === "") return onChange(0);
-          const n = Number(raw);
-          if (!Number.isNaN(n)) onChange(n);
-        }}
-        style={{ width: 110, background: "#1f1f29", color: "#f5f5f7", border: "1px solid #2c2c38", borderRadius: 4, padding: "2px 6px" }}
-      />
-    </label>
+    </div>
+  );
+}
+
+function SectionLabel({ icon, text, hint }: { icon: IconName; text: string; hint?: string }) {
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 8, margin: "6px 0 12px" }}>
+      <span style={{ color: M.blue }}><Icon name={icon} size={14} stroke={2} /></span>
+      <span style={{ ...microLabelStyle }}>{text}{hint && <Hint text={hint} />}</span>
+      <span style={{ flex: 1, height: 1, background: M.line }} />
+    </div>
   );
 }
 
 function Hint({ text }: { text: string }) {
   const [show, setShow] = useState(false);
   return (
-    <span
-      style={{ position: "relative", display: "inline-flex" }}
-      onMouseEnter={() => setShow(true)}
-      onMouseLeave={() => setShow(false)}
-    >
-      <button
-        type="button"
-        aria-label={text}
-        onClick={() => setShow((s) => !s)}
-        onFocus={() => setShow(true)}
-        onBlur={() => setShow(false)}
-        style={{
-          display: "inline-flex",
-          alignItems: "center",
-          justifyContent: "center",
-          width: 14,
-          height: 14,
-          borderRadius: "50%",
-          background: "#2c2c38",
-          color: "#bbbbcc",
-          fontSize: 10,
-          fontWeight: 600,
-          cursor: "help",
-          border: "none",
-          padding: 0,
-        }}
-      >
-        ?
-      </button>
+    <span style={{ position: "relative", display: "inline-flex", marginLeft: 6, verticalAlign: "middle" }}
+      onMouseEnter={() => setShow(true)} onMouseLeave={() => setShow(false)}>
+      <button type="button" aria-label={text} onClick={() => setShow((s) => !s)} style={hintBtn}>?</button>
       {show && <span style={tooltipStyle}>{text}</span>}
     </span>
   );
 }
 
-function fmt(n: number): string {
-  return Math.round(n).toLocaleString();
-}
+function clamp(n: number): number { return Math.max(0, Math.min(1, n)); }
+function fmt(n: number): string { return Math.round(n).toLocaleString(); }
 
-const tooltipStyle: React.CSSProperties = {
-  position: "absolute",
-  top: 20,
-  left: 0,
-  zIndex: 30,
-  width: 230,
-  background: "#0f0f16",
-  border: "1px solid #3a3a48",
-  borderRadius: 6,
-  padding: "8px 10px",
-  fontSize: 12,
-  fontWeight: 400,
-  lineHeight: 1.45,
-  textTransform: "none",
-  letterSpacing: 0,
-  color: "#dcdce4",
-  boxShadow: "0 8px 24px rgba(0,0,0,0.5)",
-  whiteSpace: "normal",
-  pointerEvents: "none",
+/* ----------------------------- styles ----------------------------- */
+const microLabelStyle: React.CSSProperties = {
+  fontSize: 10.5, letterSpacing: 1.2, fontWeight: 800,
+  textTransform: "uppercase", color: M.muted,
 };
-
 const panelStyle: React.CSSProperties = {
-  width: 360,
-  height: "100%",
-  background: "#1c1c24",
-  borderRight: "1px solid #2a2a34",
-  padding: 16,
-  overflowY: "auto",
-  fontSize: 13,
+  width: 408, height: "100%", background: M.surface,
+  borderLeft: `1px solid ${M.line}`, display: "flex", flexDirection: "column",
+  fontFamily: M.font, color: M.text,
 };
-
 const headerStyle: React.CSSProperties = {
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "space-between",
-  marginBottom: 12,
+  background: M.navy, color: "#fff", padding: "18px 22px",
 };
-
-const btnPrimary: React.CSSProperties = {
-  width: "100%",
-  marginTop: 12,
-  padding: "10px 12px",
-  background: "#4cc2ff",
-  color: "#0a1018",
-  border: "none",
-  borderRadius: 6,
-  fontWeight: 600,
-  cursor: "pointer",
+const turnChip: React.CSSProperties = {
+  fontSize: 11, fontWeight: 800, letterSpacing: 1, color: M.navy,
+  background: M.amber, padding: "4px 10px",
 };
-
-const btnSecondary: React.CSSProperties = {
-  padding: "6px 10px",
-  background: "transparent",
-  color: "#bbbbcc",
-  border: "1px solid #3a3a48",
-  borderRadius: 4,
-  cursor: "pointer",
+const exitBtn: React.CSSProperties = {
+  marginTop: 12, background: "transparent", color: M.onNavyMuted,
+  border: `1px solid ${M.navy3}`, padding: "6px 10px", fontSize: 11.5,
+  fontWeight: 700, cursor: "pointer", fontFamily: M.font, letterSpacing: 0.3,
+};
+const bodyStyle: React.CSSProperties = {
+  padding: "18px 22px 24px", overflowY: "auto", flex: 1,
+};
+const fieldBox: React.CSSProperties = { marginBottom: 15 };
+const fieldHead: React.CSSProperties = { display: "flex", alignItems: "center", gap: 9 };
+const fieldIcon: React.CSSProperties = {
+  width: 26, height: 26, border: `1.5px solid ${M.navy}`, color: M.navy,
+  display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+};
+const fieldLabel: React.CSSProperties = { fontWeight: 700, fontSize: 13.5, flex: 1, display: "inline-flex", alignItems: "center" };
+const fieldValue: React.CSSProperties = { fontWeight: 800, fontSize: 15 };
+const inputWrap: React.CSSProperties = {
+  display: "flex", alignItems: "center", gap: 1, border: `1.5px solid ${M.line}`,
+  background: M.surfaceSlate, padding: "3px 7px",
+};
+const affix: React.CSSProperties = { fontSize: 12.5, fontWeight: 700, color: M.muted2 };
+const numInput: React.CSSProperties = {
+  width: 60, border: "none", background: "transparent", textAlign: "right",
+  fontWeight: 800, fontSize: 14, color: M.text, fontFamily: M.font, outline: "none",
+};
+const stepBtn: React.CSSProperties = {
+  width: 20, height: 20, border: `1.5px solid ${M.line}`, background: M.surfaceSlate,
+  color: M.navy, fontWeight: 800, fontSize: 14, lineHeight: 1, cursor: "pointer", padding: 0,
+};
+const segWrap: React.CSSProperties = { display: "flex", border: `1.5px solid ${M.navy}` };
+const segOff: React.CSSProperties = {
+  flex: 1, textAlign: "center", fontSize: 10.5, fontWeight: 700, padding: "7px 2px",
+  color: M.muted, background: "#fff", border: "none", borderRight: `1.5px solid ${M.navy}`,
+  cursor: "pointer", fontFamily: M.font, textTransform: "uppercase", letterSpacing: 0.3,
+};
+const segOn: React.CSSProperties = { ...segOff, background: M.navy, color: "#fff" };
+const totalRow: React.CSSProperties = {
+  display: "flex", alignItems: "center", justifyContent: "space-between",
+  borderTop: `2px solid ${M.navy}`, marginTop: 4, paddingTop: 13, marginBottom: 12,
+};
+const submitBtn: React.CSSProperties = {
+  width: "100%", padding: 15, background: M.blue, color: "#fff", border: "none",
+  fontFamily: M.font, fontWeight: 800, fontSize: 14, letterSpacing: 0.6,
+  display: "flex", alignItems: "center", justifyContent: "center", gap: 9,
+  textTransform: "uppercase", cursor: "pointer", marginBottom: 22,
+};
+const logStyle: React.CSSProperties = {
+  paddingLeft: 16, margin: 0, fontSize: 12, color: M.muted, lineHeight: 1.5,
+};
+const hintBtn: React.CSSProperties = {
+  display: "inline-flex", alignItems: "center", justifyContent: "center",
+  width: 14, height: 14, borderRadius: "50%", background: M.lineHair, color: M.muted2,
+  fontSize: 10, fontWeight: 800, cursor: "help", border: "none", padding: 0,
+};
+const tooltipStyle: React.CSSProperties = {
+  position: "absolute", top: 20, left: 0, zIndex: 30, width: 230,
+  background: M.navy, border: `1px solid ${M.navy3}`, borderRadius: 4,
+  padding: "9px 11px", fontSize: 12, fontWeight: 400, lineHeight: 1.5,
+  textTransform: "none", letterSpacing: 0, color: "#E7EFF9",
+  boxShadow: "0 8px 24px rgba(11,37,69,0.3)", whiteSpace: "normal", pointerEvents: "none",
 };

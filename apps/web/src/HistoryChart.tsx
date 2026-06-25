@@ -50,8 +50,11 @@ export function HistoryChart({
 
   return (
     <svg width="100%" height={height} viewBox={`0 0 ${W} ${height}`} preserveAspectRatio="none" style={{ display: "block" }}>
-      <rect x="0" y="0" width={W} height={height} fill="#16161e" rx="4" />
-      <line x1={PAD_L} y1={height - PAD_B} x2={W - PAD_R} y2={height - PAD_B} stroke="#2c2c38" strokeWidth="1" />
+      <rect x="0" y="0" width={W} height={height} fill="#F7FAFE" stroke="#E1E8F1" />
+      {[0.25, 0.5, 0.75].map((f) => (
+        <line key={f} x1={PAD_L} y1={PAD_T + f * (height - PAD_T - PAD_B)} x2={W - PAD_R} y2={PAD_T + f * (height - PAD_T - PAD_B)} stroke="#EAF0F7" strokeWidth="1" />
+      ))}
+      <line x1={PAD_L} y1={height - PAD_B} x2={W - PAD_R} y2={height - PAD_B} stroke="#C3D2E6" strokeWidth="1" />
 
       {series.map((s) => {
         if (s.history.length === 0) return null;
@@ -62,14 +65,14 @@ export function HistoryChart({
         const last = s.history[s.history.length - 1]!;
         return (
           <g key={s.id}>
-            <path d={path} fill="none" stroke={stroke} strokeWidth="1.6" />
-            <circle cx={xFor(last.turn)} cy={yFor(last[metric])} r="2.5" fill={stroke} />
+            <path d={path} fill="none" stroke={stroke} strokeWidth="2.2" strokeLinejoin="round" strokeLinecap="round" />
+            <circle cx={xFor(last.turn)} cy={yFor(last[metric])} r="3" fill="#fff" stroke={stroke} strokeWidth="2.2" />
           </g>
         );
       })}
-      <text x={PAD_L} y={height - 2} fontSize="10" fill="#7a7a87">turn 1</text>
-      <text x={W - PAD_R} y={height - 2} fontSize="10" fill="#7a7a87" textAnchor="end">turn {turns}</text>
-      <text x={PAD_L} y={PAD_T + 2} fontSize="10" fill="#7a7a87">
+      <text x={PAD_L} y={height - 3} fontSize="10" fontWeight="600" fill="#7587A0">turn 1</text>
+      <text x={W - PAD_R} y={height - 3} fontSize="10" fontWeight="600" fill="#7587A0" textAnchor="end">turn {turns}</text>
+      <text x={PAD_L} y={PAD_T + 2} fontSize="10" fontWeight="700" fill="#5A6B82">
         {labelMax(metric, maxV)}
       </text>
     </svg>

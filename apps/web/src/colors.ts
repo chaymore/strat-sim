@@ -1,17 +1,17 @@
 // Stable display colors for companies across solo (you/low/prem/niche) and
 // multiplayer (p1..p4) seat ids, plus a hash fallback for anything else.
 const KNOWN: Record<string, number> = {
-  you: 0x4cc2ff,
-  low: 0xffb84c,
-  prem: 0xff5fa2,
-  niche: 0x8aff7a,
-  p1: 0x4cc2ff,
-  p2: 0xffb84c,
-  p3: 0xff5fa2,
-  p4: 0x8aff7a,
+  you: 0x1466b8,
+  low: 0xe8a33d,
+  prem: 0xb5476b,
+  niche: 0x2e8c73,
+  p1: 0x1466b8,
+  p2: 0xe8a33d,
+  p3: 0xb5476b,
+  p4: 0x2e8c73,
 };
 
-const PALETTE = [0x4cc2ff, 0xffb84c, 0xff5fa2, 0x8aff7a, 0xb98aff, 0xff9e6d];
+const PALETTE = [0x1466b8, 0xe8a33d, 0xb5476b, 0x2e8c73, 0x6c4f9c, 0xc05a2b];
 
 export function companyColorNum(id: string): number {
   if (KNOWN[id] != null) return KNOWN[id]!;
