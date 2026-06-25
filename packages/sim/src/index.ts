@@ -16,3 +16,11 @@ export {
   sumRD,
 } from "./finance.js";
 export { rollAdoptions, utilitiesFor } from "./adoption.js";
+export {
+  frontier,
+  frontierVector,
+  axisBuildCost,
+  unitCost,
+  growCapabilities,
+  clampToFrontier,
+} from "./production.js";

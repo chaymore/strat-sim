@@ -26,6 +26,8 @@ export interface Company {
   cash: number;
   capacity: number;
   rdPoints: number;
+  /** Per-axis capability stock: caps the quality the company can ship and sets its build cost. */
+  capabilities: FeatureVector;
   brandReputation: number;
   product: Product;
   customers: number;
@@ -81,7 +83,14 @@ export interface TurnDecision {
   companyId: CompanyId;
   price: number;
   subscriptionPrice: number;
+  /** R&D points invested per axis; grows the capability stock (frontier + cost efficiency). */
   rd: RDAllocation;
+  /**
+   * Desired shipped quality per axis, clamped to the capability frontier. Omit to
+   * ship at the frontier (R&D improvements show up immediately); pull an axis
+   * below its frontier to trade quality for a lower per-unit build cost.
+   */
+  quality?: FeatureVector;
   marketing: MarketingAllocation;
   capacityInvestment: number;
   positioningStatement?: string;
@@ -132,6 +141,12 @@ export interface PrivateCompanyView extends PublicCompanyView {
   cash: number;
   capacity: number;
   rdPoints: number;
+  /** Per-axis capability stock (supply-side: what you can build and how cheaply). */
+  capabilities: FeatureVector;
+  /** Per-axis max shippable quality given current capability. */
+  qualityFrontier: FeatureVector;
+  /** Current per-unit build cost of the product you're shipping. */
+  unitCost: number;
 }
 
 /** Aggregate, per-segment market intel shown in the Segments tab. */

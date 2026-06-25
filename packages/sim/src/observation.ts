@@ -9,6 +9,7 @@ import {
   type PublicConsumerView,
   type SegmentView,
 } from "@strat-sim/shared";
+import { frontierVector, unitCost } from "./production.js";
 
 export function buildObservation(state: GameState, asCompanyId: CompanyId): ObservationView {
   const me = state.companies[asCompanyId];
@@ -29,6 +30,9 @@ export function buildObservation(state: GameState, asCompanyId: CompanyId): Obse
     cash: me.cash,
     capacity: me.capacity,
     rdPoints: me.rdPoints,
+    capabilities: me.capabilities,
+    qualityFrontier: frontierVector(me.capabilities),
+    unitCost: unitCost(me.product.features, me.capabilities),
   };
 
   const competitors: PublicCompanyView[] = Object.values(state.companies)

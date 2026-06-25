@@ -5,6 +5,7 @@ import {
   computeTurnFinancials,
   sumRD,
 } from "../finance.js";
+import { unitCost } from "../production.js";
 import { createCompany } from "../world.js";
 
 const baseDecision = (id: string) => ({
@@ -28,7 +29,9 @@ describe("finance", () => {
     const fin = computeTurnFinancials(co, baseDecision("a"), 30, 0);
     expect(fin.revenue).toBe(30 * 300);
     expect(fin.recurringRevenue).toBe(50 * 20);
-    expect(fin.cogs).toBe(30 * 80);
+    // COGS now scales with the per-unit build cost (quality + capability), not a flat $80.
+    expect(fin.cogs).toBeCloseTo(30 * unitCost(co.product.features, co.capabilities), 5);
+    expect(fin.cogs).toBeGreaterThan(30 * 80);
     expect(fin.marketingSpend).toBe(10_000);
     expect(fin.rdSpend).toBe(10 * 10_000);
     expect(fin.capacitySpend).toBe(10 * 200);

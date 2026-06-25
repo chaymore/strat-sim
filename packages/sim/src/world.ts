@@ -3,6 +3,7 @@ import {
   DEFAULTS,
   HQ_CORNERS,
   NUM_AXES,
+  PRODUCTION,
   SEGMENTS,
   type CompanyId,
   type Company,
@@ -94,6 +95,13 @@ export function createCompany(id: CompanyId, name: string, hqPosition?: Position
     cash: DEFAULTS.startingCash,
     capacity: DEFAULTS.startingCapacity,
     rdPoints: 0,
+    // Start every axis at the capability whose frontier == startingFeatures (0.5).
+    capabilities: [
+      PRODUCTION.startCapability,
+      PRODUCTION.startCapability,
+      PRODUCTION.startCapability,
+      PRODUCTION.startCapability,
+    ],
     brandReputation: DEFAULTS.startingBrand,
     product: {
       features: [...DEFAULTS.startingFeatures] as unknown as FeatureVector,

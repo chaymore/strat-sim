@@ -5,6 +5,7 @@ import {
   type TurnDecision,
   type TurnSnapshot,
 } from "@strat-sim/shared";
+import { unitCost } from "./production.js";
 
 export interface TurnFinancials {
   unitsSold: number;
@@ -26,7 +27,9 @@ export function computeTurnFinancials(
   const revenue = unitsSold * company.product.price;
   const recurringRevenue =
     (company.subscribers + newSubscribers) * company.product.subscriptionPrice;
-  const cogs = unitsSold * DEFAULTS.baseUnitCost;
+  // Per-unit build cost depends on the quality shipped and the company's capability.
+  const perUnitCost = unitCost(company.product.features, company.capabilities);
+  const cogs = unitsSold * perUnitCost;
   const marketingSpend = decision.marketing.total;
   const rdSpend = sumRD(decision) * DEFAULTS.rdPointCost;
   const capacitySpend = decision.capacityInvestment * DEFAULTS.capacityCostPerUnit;
@@ -65,7 +68,7 @@ export function computeMarketCap(
   // Per-customer value scales with hardware gross margin: an installed base won
   // by selling near cost is worth far less than a high-margin one, so a
   // loss-leader land-grab no longer auto-wins.
-  const unitMargin = company.product.price - DEFAULTS.baseUnitCost;
+  const unitMargin = company.product.price - unitCost(company.product.features, company.capabilities);
   const marginFactor = Math.max(0.5, Math.min(1.3, 0.45 + unitMargin / 650));
   const customerValue =
     company.customers * MARKET_CAP_MULT.customerLtv * brandFactor * marginFactor;

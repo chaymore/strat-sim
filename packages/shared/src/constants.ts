@@ -53,6 +53,26 @@ export const BASS = {
   qSocial: 0.75, // word-of-mouth imitation strength
 } as const;
 
+/**
+ * Capability-frontier production model. Each company holds a per-axis capability
+ * stock K (see Company.capabilities) that R&D grows over time. K does two jobs:
+ *   - Frontier: the max quality it can ship on that axis is K/(K+frontierK0), so
+ *     pushing toward quality 1 needs ever more capability (diminishing returns).
+ *   - Cost: building a unit at quality Q on an axis costs more as Q rises
+ *     (convex, costExp) and as Q nears the frontier (stretchPenalty), and less as
+ *     capability matures (effPow discount). So investing capability both unlocks
+ *     higher quality AND makes a given quality cheaper to produce.
+ * startCapability is tuned so a fresh firm's frontier is 0.5 (== startingFeatures).
+ */
+export const PRODUCTION = {
+  frontierK0: 8,
+  startCapability: 8, // frontier(8) = 0.5
+  axisCostScale: 26, // $ scale of per-axis build cost at quality 1, base capability
+  costExp: 1.3, // convexity of cost in quality (L10 ≈ 2.5× L5)
+  stretchPenalty: 0.5, // extra cost for shipping right at your frontier
+  effPow: 0.15, // how strongly mature capability discounts unit cost (kept gentle so higher quality always costs more in the playable range)
+} as const;
+
 export const MARKET_CAP_MULT = {
   ebitda: 6, // reward real per-turn profitability more
   recurringAnnual: 6,

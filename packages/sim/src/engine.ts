@@ -1,13 +1,12 @@
 import {
   DEFAULTS,
-  NUM_AXES,
   type Company,
   type CompanyId,
-  type FeatureVector,
   type GameState,
   type TurnDecision,
 } from "@strat-sim/shared";
 import { rollAdoptions } from "./adoption.js";
+import { clampToFrontier, frontierVector, growCapabilities } from "./production.js";
 import {
   computeMarketCap,
   computeMarketShare,
@@ -34,23 +33,6 @@ export interface ResolvedCompany {
 }
 
 const EPS = 1e-9;
-
-function clamp01(x: number): number {
-  return x < 0 ? 0 : x > 1 ? 1 : x;
-}
-
-function applyRD(features: FeatureVector, rdSpent: { privacy: number; capability: number; design: number; wellness: number }): FeatureVector {
-  // Diminishing returns: each point pushes feature by k/(k+points) toward 1
-  const next: number[] = [];
-  const axes = [rdSpent.privacy, rdSpent.capability, rdSpent.design, rdSpent.wellness];
-  for (let i = 0; i < NUM_AXES; i++) {
-    const cur = features[i] ?? 0;
-    const pts = axes[i] ?? 0;
-    const delta = (1 - cur) * (pts / (pts + 8));
-    next.push(clamp01(cur + delta));
-  }
-  return [next[0]!, next[1]!, next[2]!, next[3]!] as const;
-}
 
 function applyMarketing(state: GameState, decisions: Record<CompanyId, TurnDecision>): void {
   // Simple model: marketing spend → awareness increase, with optional segment boost.
@@ -151,14 +133,20 @@ export function resolveTurn(state: GameState): ResolveResult {
   const neighbors = new NeighborIndex(state.consumers, DEFAULTS.womNeighborCount);
   const companyIds = Object.keys(state.companies);
 
-  // 1. Apply R&D, capacity, subscription price updates.
+  // 1. Apply R&D → capability, choose shipped quality, update capacity + prices.
   for (const id of companyIds) {
     const co = state.companies[id]!;
-    const d =
-      state.pendingDecisions[id] ??
-      defaultDecision(id, co.product.price, co.product.subscriptionPrice);
+    const submitted = state.pendingDecisions[id];
+    const d = submitted ?? defaultDecision(id, co.product.price, co.product.subscriptionPrice);
+    // R&D grows the per-axis capability stock (raises the quality frontier and
+    // lowers build cost). Persists across turns.
+    co.capabilities = growCapabilities(co.capabilities, d.rd);
+    // Ship the chosen quality, clamped to what capability allows. A submitted
+    // decision with no explicit quality ships at the frontier (so R&D visibly
+    // improves the product); a non-submitting company keeps its current product.
+    const desired = submitted ? d.quality ?? frontierVector(co.capabilities) : co.product.features;
     co.product = {
-      features: applyRD(co.product.features, d.rd),
+      features: clampToFrontier(desired, co.capabilities),
       price: d.price,
       subscriptionPrice: d.subscriptionPrice,
     };
